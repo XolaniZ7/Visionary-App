@@ -1,0 +1,185 @@
+---
+import BookSearch from "@components/BookSearchPage";
+import Pagination from "@components/Pagination.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { stripHtml } from "string-strip-html";
+import { z } from "zod";
+
+import { getUser } from "@server/astroHelpers";
+import { getAllBooks, getSavedBooks, k, p, hasValidSubscription } from "@server/db";
+import { booksFuse } from "@server/search";
+import SaveBook from "@components/SaveBook";
+import ReadNow from "@components/ReadNow.astro";
+
+const { searchTerm } = Astro.params;
+const search = Astro.url.searchParams.get("searchTerm")! || "";
+const results = booksFuse.search(search, { limit: 20 });
+
+const pageParam = Astro.url.searchParams.get("page");
+const pageN = z.coerce.number().parse(pageParam);
+const page = pageN || 1; // set a default page number
+const pageSize = 10; // set a default page size
+const offset = (page - 1) * pageSize;
+
+const user = await getUser(Astro.request);
+if(!user) {
+  return Astro.redirect("/login")
+}
+
+const allBooksResult = await getSavedBooks(offset, pageSize, user.id);
+const allBooks = allBooksResult.books;
+
+const continueReading =  await p.book_progress.findMany({
+    where: {
+      usersId: user.id
+    }, include: {
+      book: {
+        include: {
+          user: true
+        }
+      }
+    },
+    take: 4,
+    orderBy: { updated_at : "desc" }
+  })
+
+  const isPro = await hasValidSubscription(user.id)
+---
+
+<SiteLayout title="Library">
+ { isPro ? <div>
+    {
+      continueReading.length > 0 && (
+        <div>
+          <h1 class="text-center text-3xl font-poppins mt-3">Continue Reading</h1>
+          <div class="flex justify-center p-5">
+            <div class="container max-w-4xl">
+              {continueReading ? (
+                <section class="grid md:grid-cols-2 gap-2">
+                  {continueReading.map((result, index) => (
+                    <>
+                      <div class="bg-base-300 w-full shadow-md grid grid-cols-3 gap-3 p-4 rounded-lg justify-center items-center">
+                        <img
+                          onerror={`this.onerror=null; this.src='/api/fallback/${result.book.id}'`}
+                          data-theme="dark "
+                          class="bg-black w-full duration-150 hover:scale-105 text-xl text-center aspect-book"
+                          src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${result.book.book_cover}/public`}
+                          alt={result.book.title}
+                        />
+
+                        <div class="col-span-2 flex flex-col justify-between h-full">
+                          <div>
+                            <a
+                              href={"/book/" + result.book.id}
+                              class="font-poppins font-bold block link"
+                            >
+                              {result.book.title}
+                            </a>
+                            <a
+                              href={"/author/" + result.book.user_id}
+                              class="font-poppins text-sm link"
+                            >
+                              {result.book.user.name}
+                            </a>
+                            <p class="text-sm mt-2">
+                              {stripHtml(result.book.description ?? "")
+                                .result.split(" ")
+                                .slice(0, 10)
+                                .join(" ")}
+                            </p>
+                          </div>
+                          <ReadNow userId={user.id} bookId={result.bookId} />
+                        </div>
+                      </div>
+                    </>
+                  ))}
+                </section>
+              ) : null}
+            </div>
+          </div>
+          {allBooksResult.count > pageSize && (
+            <div class="flex justify-center mb-5">
+              <Pagination
+                currentPage={page}
+                pageSize={pageSize}
+                siblingCount={0}
+                totalCount={allBooksResult.count}
+              />
+            </div>
+          )}
+        </div>
+      )
+    }
+  </div>
+  <div>
+    <h1 class="text-center text-3xl font-poppins mt-3">Your Library</h1>
+    <div class="flex justify-center p-5 min-h-[60vh]">
+      <div class="container max-w-4xl">
+        {
+          allBooks.length > 0 ? (
+            <section class="grid md:grid-cols-2 gap-2 my-3">
+              {allBooks.map((result, index) => (
+                <>
+                  <div class="bg-base-300 w-full shadow-md grid grid-cols-3 gap-3 p-4 rounded-lg justify-center items-center">
+                    <img
+                      onerror={`this.onerror=null; this.src='/api/fallback/${result.book.id}'`}
+                      data-theme="dark "
+                      class="bg-black w-full duration-150 hover:scale-105 text-xl text-center aspect-book"
+                      src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${result.book.book_cover}/public`}
+                      alt={result.book.title}
+                    />
+
+                    <div class="col-span-2 flex flex-col justify-between h-full">
+                      <div>
+                        <a
+                          href={"/book/" + result.book.id}
+                          class="font-poppins font-bold block link"
+                        >
+                          {result.book.title}
+                        </a>
+                        <a
+                          href={"/author/" + result.book.user_id}
+                          class="font-poppins text-sm link"
+                        >
+                          {result.book.user.name}
+                        </a>
+                        <p class="text-sm mt-2">
+                          {stripHtml(result.book.description ?? "")
+                            .result.split(" ")
+                            .slice(0, 10)
+                            .join(" ")}
+                        </p>
+                      </div>
+                      <ReadNow userId={user.id} bookId={result.bookId} />
+                    </div>
+                  </div>
+                </>
+              ))}
+            </section>
+          ) : (
+            <div class="flex flex-col items-center justify-center gap-3">
+              <p>Nothing here. Add some books to you library</p>
+              <a href="/books" class="btn btn-primary">Browse</a>
+            </div>
+          )
+        }
+      </div>
+    </div>
+    {
+      allBooksResult.count > pageSize && (
+        <div class="flex justify-center mb-5">
+          <Pagination
+            currentPage={page}
+            pageSize={pageSize}
+            siblingCount={0}
+            totalCount={allBooksResult.count}
+          />
+        </div>
+      )
+    }
+  </div> : <div class="flex flex-col gap-2 justify-center items-center my-52">
+            <img class="w-24" src="https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/78b70217-3179-4e31-4ae1-314817ccb300/public" />
+            <p class="text-lg">Library is a subscriber only feature</p>
+            <a class="btn btn-primary" href="/upgrade">Upgrade Now</a>
+            </div>}
+</SiteLayout>

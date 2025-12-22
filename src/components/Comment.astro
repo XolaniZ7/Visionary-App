@@ -1,0 +1,60 @@
+---
+import dayjs from "dayjs";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+
+import { ChapterComment, getCommentReply } from "@server/db";
+
+dayjs.extend(localizedFormat);
+
+interface Props {
+  comment: ChapterComment;
+}
+
+const { comment } = Astro.props;
+
+const reply = await getCommentReply(comment.id);
+
+console.log({ comment, reply });
+---
+
+<div class="p-2">
+  <div class="chat chat-start max-w-2xl">
+    <div
+      class="chat-image rounded-full avatar ring ring-primary ring-offset-base-100 ring-offset-2"
+    >
+      <div class="w-10 rounded-full">
+        <img
+          onerror={`this.onerror=null; this.src='/kq6bujqw.bmp'`}
+          src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/avatars/${comment.avatar}/Thumbnail`}
+        />
+      </div>
+    </div>
+    <div class="chat-header">
+      {comment.name}
+      <time class="text-xs opacity-50">{dayjs(comment.created_at).format("LLL")}</time>
+    </div>
+    <div class="chat-bubble bg-base-300 text-base-content shadow-md">
+      {comment.comment}
+    </div>
+  </div>
+
+  {
+    reply && (
+      <div class="chat chat-end max-w-2xl">
+        <div class="chat-image rounded-full avatar ring ring-primary ring-offset-base-100 ring-offset-2">
+          <div class="w-10 rounded-full">
+            <img
+              onerror={`this.onerror=null; this.src='/kq6bujqw.bmp'`}
+              src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/avatars/${reply.avatar}/Thumbnail`}
+            />
+          </div>
+        </div>
+        <div class="chat-header">
+          {reply.name}
+          <time class="text-xs opacity-50">{dayjs(reply.created_at).format("LLL")}</time>
+        </div>
+        <div class="chat-bubble bg-base-300 text-base-content shadow-md">{reply.comment}</div>
+      </div>
+    )
+  }
+</div>

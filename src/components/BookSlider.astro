@@ -1,0 +1,62 @@
+---
+import { getFeaturedBooks } from "@server/db";
+
+import BookCover from "./BookCover.astro";
+
+const books = await getFeaturedBooks();
+---
+
+<section class="glide" aria-label="Featured Books Slider">
+  <h3 class="font-ebgaramond text-2xl mx-2 my-2 md:hidden">New and Trending</h3><div
+    class="glide__track"
+    data-glide-el="track"
+  >
+    <ul class="glide__slides">
+      {
+        books.map((book) => (
+          <li class="glide__slide p-2">
+            <BookCover book={book} />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<script>
+  import Glide from "@glidejs/glide";
+
+  //@ts-ignore
+  new Glide(".glide", {
+    type: "carousel",
+    startAt: 0,
+    perView: 4,
+    peek: {
+      before: 0,
+      after: 120,
+    },
+    breakpoints: {
+      1279: {
+        perView: 2,
+        peek: {
+          before: 0,
+          after: 60,
+        },
+      },
+      765: {
+        perView: 4,
+        peek: {
+          before: 0,
+          after: 60,
+        },
+      },
+      480: {
+        perView: 2,
+        peek: {
+          before: 0,
+          after: 60,
+        },
+      },
+    },
+  }).mount();
+</script>

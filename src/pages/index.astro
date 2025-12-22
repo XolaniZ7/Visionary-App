@@ -1,0 +1,132 @@
+---
+import AuthorSection from "@components/AuthorSection.astro";
+import AuthorSlider from "@components/AuthorSlider.astro";
+import BookSection, { titleCase } from "@components/BookSection.astro";
+import BookSlider from "@components/BookSlider.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import type { ExpandRecursively } from "src/shared/types";
+
+import {
+  getFeaturedBooks,
+  getLatestApprovedUsers,
+  getMostPopularBooks,
+  getMostPopularBooksByGenre,
+  getPremiumBooks,
+  k,
+} from "@server/db";
+
+const title = "A Digital Bookshelf";
+const premiumBooks = await getPremiumBooks();
+const mostPopularBooks = await getMostPopularBooks();
+const mostPopularActionBooks = await getMostPopularBooksByGenre("Action");
+const mostPopularDramaBooks = await getMostPopularBooksByGenre("Drama");
+const mostPopularFantasyBooks = await getMostPopularBooksByGenre("Fantasy");
+const mostPopularHorrorBooks = await getMostPopularBooksByGenre("Horror");
+const mostPopularPoetryBooks = await getMostPopularBooksByGenre("Poetry");
+
+const newAuthors = await getLatestApprovedUsers();
+
+//const bottomAds = k.selectFrom("ads").selectAll().where("page", "=", "" )
+//::where('type', 'Top')->where('page', 'Books')->where('status', '1')->get();
+---
+
+<SiteLayout title={title}>
+  <main class="px-5 xl:p-10 mt-8">
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-10">
+      <div class="col-span-1 hidden md:block flex-col-reverse md:col-span-2 xl:col-span-1 sm:p-10">
+        <h1 class="text-2xl xl:text-6xl font-caslon mb-8 leading-tight">
+          New and<br class="hidden xl:block" /> Trending
+        </h1>
+
+        <form action="/search" class="flex items-center">
+          <label for="simple-search" class="sr-only">Search</label>
+          <div class="relative w-full">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg
+                aria-hidden="true"
+                class="w-6 h-6 text-gray-500 dark:text-gray-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+                ><path
+                  fill-rule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                  clip-rule="evenodd"></path></svg
+              >
+            </div>
+            <input
+              name="searchTerm"
+              type="text"
+              placeholder="Search for Books, Authors or Genres"
+              class="input bg-base-300 border-base-content rounded-full w-full pl-10"
+            />
+          </div>
+        </form>
+      </div>
+      <div class="col-span-1 md:col-span-2 xl:col-span-3 w-full">
+        <BookSlider />
+      </div>
+    </section>
+
+    <AuthorSection authors={newAuthors} key="new-authors" sectionTitle="New Authors" />
+
+    <div class="bg-accent rounded-xl shadow-lg text-accent-content p-3 my-4 relative">
+      <div class="absolute inset-0 pointer-events-none z-0">
+        <img
+          src="https://images.pexels.com/photos/4476376/pexels-photo-4476376.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+          alt=""
+          class="h-full w-full object-cover object-center glass opacity-20 blur-lg"
+        />
+      </div>
+      <BookSection
+        sectionTitle="Premium Books"
+        key="premium-books"
+        books={premiumBooks}
+        highlight
+      />
+    </div>
+
+    <div>
+      <BookSection
+        sectionTitle="Most Popular Books"
+        key="most-popular-books"
+        books={mostPopularBooks}
+      />
+      <div>
+        <BookSection
+          sectionTitle="Best in Action"
+          key="most-popular-books-action"
+          books={mostPopularActionBooks}
+        />
+        <BookSection
+          sectionTitle="Best in Poetry"
+          key="most-popular-books-Poetry"
+          books={mostPopularPoetryBooks}
+        />
+        <BookSection
+          sectionTitle="Best in Drama"
+          key="most-popular-books-drama"
+          books={mostPopularDramaBooks}
+        />
+        <BookSection
+          sectionTitle="Best in Fantasy"
+          key="most-popular-books-fantasy"
+          books={mostPopularFantasyBooks}
+        />
+        <BookSection
+          sectionTitle="Best in Horror"
+          key="most-popular-books-Horror"
+          books={mostPopularHorrorBooks}
+        />
+      </div>
+    </div>
+
+    <style lang="scss" is:global>
+      @import "node_modules/@glidejs/glide/src/assets/sass/glide.core";
+      @import "node_modules/@glidejs/glide/src/assets/sass/glide.theme";
+      .btn {
+        text-transform: none;
+      }
+    </style>
+  </main>
+</SiteLayout>

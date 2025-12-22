@@ -1,0 +1,160 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { z } from "zod";
+
+import { formDataToJson, verifyCaptcha } from "@server/astroHelpers";
+import { sendContactFormEmail } from "@server/email";
+
+const schema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  message: z.string(),
+  "g-recaptcha-response": z.string(),
+});
+
+let successMessage = "";
+let errorMessage = "";
+
+if (Astro.request.method === "POST") {
+  try {
+    const data = await Astro.request.formData();
+    const parsedData = schema.safeParse(formDataToJson(data));
+
+    if (parsedData.success) {
+      console.log("Parse Success");
+      const captchaPassed = await verifyCaptcha(parsedData.data["g-recaptcha-response"]);
+
+      if (captchaPassed) {
+        console.log("Captcha Passed Success");
+        await sendContactFormEmail(
+          parsedData.data.name,
+          parsedData.data.email,
+          parsedData.data.message
+        );
+        successMessage = "Thank you. Your message has been sent";
+      } else {
+        errorMessage = "Captcha Failed. Please try again";
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+  }
+}
+---
+
+<SiteLayout title="Contact">
+  <div
+    class="container mx-auto text-center items-center flex flex-col gap-8 p-4 md:p-14 font-poppins max-w-4xl"
+  >
+    <h1 class="text-4xl">Contact us</h1>
+    <p>
+      For any questions, problems or if you would like to know more about us, feel free to contact
+      us and we will reply.
+    </p>
+    <section class="flex w-full flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md">
+      <h2 class="text-2xl">
+        Existing authors and Authors that want to join us, please register an account <a
+          class="link"
+          href="/join/author">here</a
+        >
+      </h2>
+    </section>
+    {
+      successMessage && (
+        <div class="alert alert-success shadow-lg">
+          <div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="stroke-current flex-shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+        </div>
+      )
+    }
+    {
+      errorMessage && (
+        <div class="alert alert-error shadow-lg rounded-sm">
+          <div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="stroke-current flex-shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>Error! {errorMessage}</span>
+          </div>
+        </div>
+      )
+    }
+    <section class="flex flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md w-full mb-20">
+      <h2 class="text-2xl">How can we help</h2>
+      <form method="post" id="contactForm" class="flex flex-col gap-2 justify-center items-center">
+        <div class="w-full">
+          <div class="form-control w-full">
+            <label class="label">
+              <span class="label-text">What is your name?</span>
+            </label>
+            <input
+              required
+              name="name"
+              type="text"
+              placeholder="Type here"
+              class="input input-bordered w-full"
+            />
+          </div>
+          <div class="form-control w-full">
+            <label class="label">
+              <span class="label-text">What is your email?</span>
+            </label>
+            <input
+              required
+              name="email"
+              type="email"
+              placeholder="Type here"
+              class="input input-bordered w-full"
+            />
+          </div>
+          <div class="form-control w-full">
+            <label class="label">
+              <span class="label-text">What is your message?</span>
+            </label>
+            <textarea
+              required
+              class="textarea textarea-bordered h-24"
+              name="message"
+              placeholder="Type your message here"></textarea>
+          </div>
+        </div>
+        <div class="g-recaptcha my-4" data-sitekey={process.env.CAPTCHA_SITE_KEY}></div>
+        <div class="flex w-full justify-end">
+          <button class="btn btn-primary">Submit</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</SiteLayout>
+
+<script is:inline>
+  function onSubmit(token) {
+    document.getElementById("contactForm").submit();
+  }
+</script>

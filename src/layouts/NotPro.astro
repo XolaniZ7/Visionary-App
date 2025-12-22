@@ -1,0 +1,9 @@
+---
+import { getUser } from "@server/astroHelpers";
+import { hasValidSubscription } from "@server/db";
+
+const user = await getUser(Astro.request);
+const isPro = user ? await hasValidSubscription(user.id) : false;
+---
+
+{!isPro && <slot />}

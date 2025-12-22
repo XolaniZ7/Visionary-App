@@ -1,0 +1,20 @@
+---
+import { getSession } from "auth-astro"
+import Layout from "@layouts/Layout.astro";
+import App from "src/app/main";
+import { authOpts } from "@server/authOpts";
+import { getUser } from "@server/astroHelpers";
+
+
+const user = await getUser(Astro.request)
+if (!user) {
+  return Astro.redirect("/login")
+}
+if(!user.verified) {
+  return Astro.redirect("/verify-email")
+}
+---
+
+<Layout noAds={true} title="Visionary Writings - Dashboard">
+  <App client:only="react" />
+</Layout>

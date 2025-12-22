@@ -1,0 +1,87 @@
+---
+import type { MostPopularBook, MostPopularBooks } from "@server/db";
+
+import BookComponent from "./Book.astro";
+import BookCover from "./BookCover.astro";
+
+type Books = {
+  id: number;
+  title: string;
+  slug: string;
+  totalChapters: number;
+  cover: string;
+  userId: number;
+  userName: string;
+}[];
+
+interface Props {
+  books: Books;
+  key: string;
+  sectionTitle: string;
+  highlight?: boolean;
+}
+
+const { books, key, sectionTitle, highlight = false } = Astro.props;
+
+export const titleCase = (str: string) => {
+  return str.toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
+};
+---
+
+<section class={`glide_${key}  mt-10`} aria-label={sectionTitle}>
+  {highlight ? <div class="flex items-center justify-center z-10">
+  <h3 class="text-2xl font-bold mx-2 md:text-center my-6">{sectionTitle}</h3>
+  <a class="btn text-base-100 btn-link" href="/premium-books">View all</a>
+    </div> : <h3 class="text-2xl font-bold mx-2 md:text-center my-6">{sectionTitle}</h3>}
+  <div class="glide__track" data-glide-el="track">
+    <ul class="glide__slides">
+      {
+        books.map((book) => (
+          <li class="glide__slide p-2">
+            <a class="w-full" href={"/book/" + book.id}>
+              <div class="glide__slide flex flex-col">
+                <img
+                  onerror={`this.onerror=null; this.src='/api/fallback/${book.id}'`}
+                  data-theme="dark"
+                  class="aspect-book object-cover rounded-lg shadow-md w-full hover:scale-105 duration-75"
+                  src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${book.cover}/Thumbnail`}
+                  alt={book.title}
+                />
+                <div class="flex flex-col justify-between py-2 items-start gap-5 ">
+                  <div class="flex flex-col justify-center items-start w-full">
+                    <h3 class="text-lg truncate">{titleCase(book.title)}</h3>
+                    <a href={"/author/" + book.userId} class="text-sm link w-full truncate">
+                      {book.userName}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<script define:vars={{ key, highlight }}>
+  //import Glide from "@glidejs/glide";
+
+  console.log("SDSD");
+  console.log(key);
+  //@ts-ignore
+  new Glide(`.glide_${key}`, {
+    type: highlight ? "slider" : "carousel",
+    gap: 20,
+    startAt: 0,
+    perView: 8,
+    peek: { before: 0, after: 110 },
+    breakpoints: {
+      1280: {
+        perView: 2,
+        gap: 1,
+        peek: { before: 0, after: 100 },
+      },
+    },
+  }).mount();
+</script>

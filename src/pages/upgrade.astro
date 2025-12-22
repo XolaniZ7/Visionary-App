@@ -1,0 +1,12 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { BillingWrapper } from "src/app/main";
+
+import PricingCards from "../app/modules/billing/PricingCards";
+---
+
+<SiteLayout title="Upgrade">
+  <div class="bg-base-100">
+    <BillingWrapper client:only="react" />
+  </div>
+</SiteLayout>

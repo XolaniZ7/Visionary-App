@@ -1,0 +1,94 @@
+---
+import { getLatestApprovedUsers } from "@server/db";
+
+import { titleCase } from "./BookSection.astro";
+
+const newAuthors = await getLatestApprovedUsers();
+---
+
+<section class="mt-10">
+  <h3 class="font-ebgaramond text-2xl mx-2 md:text-center">New Authors</h3>
+  <div class="cool-slider py-6">
+    <div class="cool-slide-track flex gap-6">
+      {
+        newAuthors.map((author) => (
+          <div class="cool-slide hover:scale-105 transition duration-200 card-container flex gap-6 animation-scroll-right-left">
+            <a
+              href={"/author/" + author.id}
+              class="card border-dashed border-2 border-primary bg-base-300 "
+            >
+              <div class="card-body p-5 px-6 items-center text-center">
+                <div class="flex gap-4 items-center">
+                  <div class="avatar">
+                    <div class="w-12 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                      <img
+                        onerror={`this.onerror=null; this.src='/kq6bujqw.bmp'`}
+                        src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/avatars/${author.avatar}/Thumbnail`}
+                      />
+                    </div>
+                  </div>
+                  <h3 class="font-ebgaramond text-lg whitespace-nowrap">
+                    {titleCase(author.name)}
+                  </h3>
+                </div>
+              </div>
+            </a>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style lang="scss">
+  $animationSpeed: 40s;
+
+  // Animation
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-250px * 7));
+    }
+  }
+
+  // Styling
+  .cool-slider {
+    margin: auto;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+
+    &::before,
+    &::after {
+      content: "";
+      height: 100px;
+      position: absolute;
+      width: 200px;
+      z-index: 2;
+    }
+
+    &::after {
+      right: 0;
+      top: 0;
+      transform: rotateZ(180deg);
+    }
+
+    &::before {
+      left: 0;
+      top: 0;
+    }
+
+    .cool-slide-track {
+      animation: scroll $animationSpeed linear infinite;
+      display: flex;
+      width: calc(250px * 14);
+    }
+
+    .cool-slide {
+      height: 90px;
+    }
+  }
+</style>

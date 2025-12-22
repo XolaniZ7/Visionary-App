@@ -1,0 +1,31 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { z } from "zod";
+---
+
+<SiteLayout title="Payment Failed">
+  <div>
+    <div class="container mx-auto p-4 flex items-center justify-center">
+      <div class="w-full max-w-md">
+        <div class="card-body">
+          <div class="flex justify-center mb-4">
+            <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"
+            ></script>
+            <lottie-player
+              src="https://assets4.lottiefiles.com/packages/lf20_dAPa1g1Yl8.json"
+              background="transparent"
+              speed="1"
+              style="width: 400px; height: 400px;"
+              loop
+              autoplay
+              class="-m-10"></lottie-player>
+          </div>
+          <div class="flex justify-center text-2xl">
+            <h2 class="card-title text-center mb-4">File not Found</h2>
+          </div>
+          <p class="text-center">Please try again</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</SiteLayout>

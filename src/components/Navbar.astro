@@ -1,0 +1,100 @@
+---
+//import { getUser } from "@astro-auth/core";
+import IsPro from "@layouts/IsPro.astro";
+import NotPro from "@layouts/NotPro.astro";
+import { getSession } from "auth-astro";
+
+import { getUser } from "@server/astroHelpers";
+import { authOpts } from "@server/authOpts";
+import { hasValidSubscription } from "@server/db";
+
+import Login from "./Login.astro";
+import ThemeToggle from "./ThemeToggle.astro";
+
+const user = await getSession(Astro.request, authOpts);
+const user2 = await getUser(Astro.request);
+const isPro = user2 ? await hasValidSubscription(user2.id) : false;
+---
+
+<div class="navbar items-center gap-3 p-3 justify-between bg-base-200 shadow-lg">
+  <div class="">
+    <a href="/"><img class="w-16 hide-dark" src="/logo-vw-black.png" /></a>
+    <a href="/"><img class="w-16 hide-light" src="/logo-vw-white.png" /></a>
+  </div>
+  <ul class="menu menu-horizontal hidden md:flex font-bold rounded-lg p-3">
+    <li><a href="/">Home</a></li>
+    <li><a href="/books">Browse</a></li>
+    <li><a href="/library">Library</a></li>
+    <li><a href="/search">Search</a></li>
+    <li><a href="/about">About</a></li>
+    <!-- <li><a href="/contact">Contact</a></li> -->
+
+    <NotPro>
+      <li>
+        <a class="link flex gap-2 text-primary font-bold" href="/upgrade">
+          Tired of ads? Subscribe<svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="w-6 h-6"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 019.75 22.5a.75.75 0 01-.75-.75v-4.131A15.838 15.838 0 016.382 15H2.25a.75.75 0 01-.75-.75 6.75 6.75 0 017.815-6.666zM15 6.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z"
+              clip-rule="evenodd"></path>
+            <path
+              d="M5.26 17.242a.75.75 0 10-.897-1.203 5.243 5.243 0 00-2.05 5.022.75.75 0 00.625.627 5.243 5.243 0 005.022-2.051.75.75 0 10-1.202-.897 3.744 3.744 0 01-3.008 1.51c0-1.23.592-2.323 1.51-3.008z"
+            ></path>
+          </svg></a
+        >
+      </li>
+    </NotPro>
+  </ul>
+  <NotPro>
+    <div class="flex items-center justify-center w-full md:hidden">
+      <a class="link flex gap-2 text-primary font-bold" href="/upgrade">
+        Tired of ads? Subscribe<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 019.75 22.5a.75.75 0 01-.75-.75v-4.131A15.838 15.838 0 016.382 15H2.25a.75.75 0 01-.75-.75 6.75 6.75 0 017.815-6.666zM15 6.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z"
+            clip-rule="evenodd"></path>
+          <path
+            d="M5.26 17.242a.75.75 0 10-.897-1.203 5.243 5.243 0 00-2.05 5.022.75.75 0 00.625.627 5.243 5.243 0 005.022-2.051.75.75 0 10-1.202-.897 3.744 3.744 0 01-3.008 1.51c0-1.23.592-2.323 1.51-3.008z"
+          ></path>
+        </svg></a
+      >
+    </div>
+  </NotPro>
+  <div class="flex-none gap-2">
+    <div class="hidden lg:block">
+      {
+        user ? (
+          <a href="/app" class="btn btn-secondary rounded-full">
+            Dashboard
+          </a>
+        ) : (
+          <Login />
+        )
+      }
+    </div>
+    <ThemeToggle />
+  </div>
+</div>
+
+<style lang="scss">
+  html[data-theme="dark"] {
+    .hide-dark {
+      display: none;
+    }
+  }
+  html[data-theme="light"] {
+    .hide-light {
+      display: none;
+    }
+  }
+</style>

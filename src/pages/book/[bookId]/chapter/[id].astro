@@ -1,0 +1,404 @@
+---
+import AdPlacement from "@components/AdPlacement.astro";
+import { titleCase } from "@components/BookSection.astro";
+import Comment from "@components/Comment.astro";
+import Pagination from "@components/Pagination.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { sql } from "kysely";
+import { DOTS, usePagination } from "src/shared/paginationHelper";
+import { stripHtml } from "string-strip-html";
+import { z } from "zod";
+
+import { approveText, formDataToJson, getUser } from "@server/astroHelpers";
+import { getChapterComments, hasValidSubscription, k, p } from "@server/db";
+
+const { id, bookId } = Astro.params;
+const chapterId = z.coerce.number().parse(id);
+const bookIdParsed = z.coerce.number().parse(bookId);
+
+const user = await getUser(Astro.request);
+
+const schema = z.object({
+  comment: z.string().min(1),
+  chapterId: z.coerce.number(),
+});
+
+let successMessage = "";
+
+if (Astro.request.method === "POST") {
+  const user = await getUser(Astro.request);
+  try {
+    const data = await Astro.request.formData();
+    const submittedData = formDataToJson(data);
+    const parsedData = schema.safeParse(formDataToJson(data));
+    console.log({ parsedData });
+
+    if (parsedData.success) {
+      if (user) {
+        const commentIsSafe = await approveText(parsedData.data.comment);
+        console.log({ commentIsSafe });
+
+        await p.comments.create({
+          data: {
+            user_name: user.name,
+            user_email: user.email,
+            user_id: user.id,
+            chapter_id: parsedData.data.chapterId,
+            reply_to: 0,
+            comment: parsedData.data.comment,
+            status: commentIsSafe ? 1 : 0,
+            approve: commentIsSafe ? 1 : 0,
+            updated_at: new Date(),
+          },
+        });
+
+        successMessage = commentIsSafe
+          ? "Awesome! Your comment has been added successfully!"
+          : "Thank you! Your comment has been submitted and is awaiting approval";
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+  }
+}
+
+const chapter = await k
+  .selectFrom("Chapter")
+  .innerJoin("book", "book.id", "Chapter.book_id")
+  .innerJoin("users", "users.id", "book.user_id")
+  .selectAll("Chapter")
+  .select(["users.name as username", "book.title as bookTitle", "user_id", "book.exclusiveStatus"])
+  .where("Chapter.id", "=", chapterId)
+  .where("Chapter.deleted_at", "is", null)
+  .where("Chapter.status", "=", 1)
+  .executeTakeFirst();
+
+  if(!chapter) return Astro.redirect("/404")
+
+const chapters = await k
+  .selectFrom("Chapter")
+  .select(["id", "title", sql<number>`ROW_NUMBER () OVER (ORDER BY created_at)`.as("row")])
+  .where("book_id", "=", bookIdParsed)
+  .where("Chapter.deleted_at", "is", null)
+  .where("Chapter.status", "=", 1)
+  .orderBy("created_at")
+  .execute();
+
+const currentPage = chapters.find((x) => x.id === chapter.id)?.row;
+const currentPageIndex = chapters.findIndex((x) => x.id === chapter.id);
+
+const previousPage = chapters[currentPageIndex - 1];
+const nextPage = chapters[currentPageIndex + 1];
+
+const paginationRange = usePagination({
+  currentPage: currentPage ?? 0,
+  totalCount: chapters.length,
+  siblingCount: 0,
+  pageSize: 1,
+});
+
+const comments = await getChapterComments(chapter.id);
+
+const content = chapter.chapter_content;
+const contentArr = content.split(",");
+
+const middle = Math.floor(contentArr.length / 2);
+
+const part1 = contentArr.slice(0, middle).join(",");
+const part2 = contentArr.slice(middle).join(",");
+
+if (currentPageIndex > 0 && user) {
+  await p.book_progress.upsert({
+    where: {
+      usersId_bookId: {
+        usersId: user.id,
+        bookId: bookIdParsed,
+      },
+    },
+    update: {
+      chapterId: chapterId,
+    },
+    create: {
+      usersId: user.id,
+      bookId: bookIdParsed,
+      chapterId: chapterId,
+      updated_at: new Date(),
+    },
+  });
+}
+
+const isPro = user?.id ? await hasValidSubscription(user.id) : false
+
+
+if (user && isPro && chapter.exclusiveStatus === "Exclusive") {
+  const chkuser = await k
+    .selectFrom("premium_books_view_count")
+    .select((eb) => eb.fn.count<number>("id").as("count"))
+    .where("book_id", "=", chapter.book_id)
+    .where("logged_in_user_id", "=", user.id)
+    .executeTakeFirstOrThrow();
+
+  if (chkuser.count === 0) {
+    await p.premium_books_view_count.create({
+      data: {
+        book_id: chapter.book_id,
+        logged_in_user_id: user.id,
+      },
+    });
+    await p.book.update({ where: { id: chapter.book_id }, data: { views: { increment: 1 } } });
+
+    const { bookViewCount } = await k
+      .selectFrom("books_view_count")
+      .select((eb) => eb.fn.count<number>("id").as("bookViewCount"))
+      .where("book_id", "=", chapter.book_id)
+      .executeTakeFirstOrThrow();
+
+
+    const amount = 0.95;
+    const type = "book";
+
+    await p.transaction.create({
+      data: {
+        user_id: chapter.user_id,
+        amount: amount,
+        type: type,
+        on_views: bookViewCount,
+        date: new Date(),
+      },
+    });
+    await p.users.update({ where: { id: chapter.user_id }, data: { amount: { increment: amount } } });
+    await p.users.updateMany({ where: { admin: true }, data: { amount: { increment: amount } } });
+  }
+}
+
+---
+
+<SiteLayout title={`Chapter: ${chapter.title}`}>
+  { ((((currentPage ?? 0) < 3)) || isPro || chapter.exclusiveStatus !== "Exclusive") ? <div class="p-3 lg:px-24 2xl:px-72 lg:pt-16 min-h-full">
+    <div class="font-poppins flex justify-center -ml-3 mb-4 px-4"></div>
+    <div class="flex flex-col gap-4 lg:flex-row justify-between">
+      <div class="flex flex-col gap-1">
+        <ul class="flex text-sm flex-wrap gap-1 justify-center lg:justify-start">
+          <li>
+            <a href={"/author/" + chapter.user_id} class="link flex"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-5 h-5 m-1"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+                ></path>
+              </svg>
+              {chapter.username}</a
+            >
+          </li>
+          <li>
+            <a href={"/book/" + chapter.book_id} class="link flex"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-5 h-5 m-1"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                ></path>
+              </svg>
+              {chapter.bookTitle}</a>
+          </li>
+          <!-- <li>{chapter.title}</li> -->
+        </ul>
+        <h1 class="font-poppins text-3xl font-bold text-center lg:text-start">{chapter.title}</h1>
+      </div>
+      <div class="btn-group justify-center">
+        {
+          previousPage ? (
+            <a href={`/book/${bookIdParsed}/chapter/${previousPage.id}`} class="btn btn-primary">
+              Previous
+            </a>
+          ) : (
+            <button disabled class="btn btn-primary">
+              Previous
+            </button>
+          )
+        }
+        <button class="btn btn-primary">Page {currentPage}</button>
+        {
+          nextPage ? (
+            <a href={`/book/${bookIdParsed}/chapter/${nextPage.id}`} class="btn btn-primary">
+              Next
+            </a>
+          ) : (
+            <button disabled class="btn btn-primary">
+              Next
+            </button>
+          )
+        }
+      </div>
+    </div>
+    <div class="my-4 topAds">
+      <AdPlacement page="reading_page" type="Top" pageContent={[chapter.chapter_content]} />
+    </div>
+    {
+      successMessage && (
+        <div class="alert alert-success shadow-lg my-4">
+          <div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="stroke-current flex-shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+        </div>
+      )
+    }
+    <div class="bg-base-300 p-4 2xl:p-8 rounded-xl shadow-2xl mt-8">
+      <div class="chapter-content whitespace-pre-wrap" set:html={part1} />
+      <AdPlacement page="reading_page" type="inChapters" pageContent={[chapter.chapter_content]} />
+      <div class="chapter-content whitespace-pre-wrap" set:html={part2} />
+    </div>
+    <AdPlacement page="reading_page" type="Bottom" pageContent={[chapter.chapter_content]} />
+    <div class="flex justify-center items-center mt-8">
+      {
+        paginationRange && (
+          <div>
+            <ul class="btn-group">
+              {/* Left navigation arrow */}
+              {currentPage && currentPage > 1 ? (
+                <a
+                  href={`/book/${bookIdParsed}/chapter/${previousPage.id}`}
+                  class="btn btn-primary"
+                >
+                  <div>«</div>
+                </a>
+              ) : (
+                <a class="btn btn-disabled">
+                  <div>«</div>
+                </a>
+              )}
+              {paginationRange.map((pageNumber) => {
+                // If the pageItem is a DOT, render the DOTS unicode character
+                if (pageNumber === DOTS) {
+                  return null;
+                }
+
+                // Render our Page Pills
+                return (
+                  <a
+                    href={`/book/${bookIdParsed}/chapter/${chapters[pageNumber - 1]?.id}`}
+                    class={`btn ${pageNumber === currentPage ? "btn-info" : "btn-primary"}`}
+                  >
+                    {pageNumber}
+                  </a>
+                );
+              })}
+              {/*  Right Navigation arrow */}
+              {currentPage && currentPage < chapters.length - 1 ? (
+                <a href={`/book/${bookIdParsed}/chapter/${nextPage.id}`} class="btn btn-primary">
+                  <div>»</div>
+                </a>
+              ) : (
+                <a class="btn btn-disabled">
+                  <div>»</div>
+                </a>
+              )}
+            </ul>
+          </div>
+        )
+      }
+    </div>
+  </div>
+  <div class="flex items-center flex-col">
+    <div class="p-4 w-full xl:w-1/2 my-8" id="commentSection">
+      <h2 class="text-2xl font-poppins font-bold my-3 mt-12 leading-tight">Comments</h2>
+      {
+        user ? (
+          <form method="post" class="mb-6 flex flex-col gap-3">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Add Comment</span>
+              </label>
+              <textarea
+                class="textarea bg-base-300 textarea-primary w-full"
+                name="comment"
+                placeholder="Add your comment here..."
+              />
+              <input type="hidden" name="chapterId" value={chapter.id} />
+            </div>
+            <div class="flex justify-end w-full">
+              <button class="btn btn-outline btn-primary">Submit</button>
+            </div>
+          </form>
+        ) : (
+          <div
+            id="alert-additional-content-1"
+            class="p-4 mb-4 text-primary border border-primary rounded-lg bg-base-300"
+            role="alert"
+          >
+            <div class="flex items-center">
+              <svg
+                aria-hidden="true"
+                class="w-5 h-5 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span class="sr-only">Info</span>
+              <h3 class="text-lg font-medium">Login to comment</h3>
+            </div>
+            <div class="mt-2 mb-4 text-sm">
+              Join the conversation and share your thoughts with the author and fellow readers!
+            </div>
+            <div class="flex">
+              <a href="/login" type="button" class="btn btn-sm btn-primary">
+                Login
+              </a>
+            </div>
+          </div>
+        )
+      }
+      <div class="max-w-2xl">
+        {comments.map((comment) => <Comment comment={comment} />)}
+      </div>
+    </div>
+  </div> : <div class="flex flex-col gap-2 justify-center items-center my-52 p-4">
+            <img class="w-24" src="https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/78b70217-3179-4e31-4ae1-314817ccb300/public" />
+            <p class="text-lg text-center">Enjoying the story? Subscribe now to unlock the full book and keep reading. The best is yet to come - don’t miss out on what happens next!</p>
+            <a class="btn btn-primary" href="/upgrade">Subscribe Now</a>
+            </div> }
+</SiteLayout>
+
+<style>
+  .chapter-content {
+    font-family: "EB Garamond";
+    font-size: 18px;
+    line-height: 2rem;
+  }
+</style>

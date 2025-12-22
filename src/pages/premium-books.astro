@@ -1,0 +1,65 @@
+---
+import AdPlacement from "@components/AdPlacement.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { stripHtml } from "string-strip-html";
+
+
+import { getPremiumBooks } from "@server/db";
+
+const premiumBooks = await getPremiumBooks(true)
+---
+
+<SiteLayout title="Premium Books">
+  <h1 class="text-center text-3xl font-poppins my-4">Premium Books</h1>
+  <div class="flex justify-center p-5 min-h-[60vh]">
+    <div class="container max-w-4xl">
+      {
+        premiumBooks ? (
+          <section class="grid md:grid-cols-2 gap-2 my-3">
+            {premiumBooks.map((result, index) => (
+              <>
+                {" "}
+                <div class="bg-base-300 w-full shadow-md grid grid-cols-3 gap-3 p-4 rounded-lg justify-center items-center">
+                  <img
+                    onerror={`this.onerror=null; this.src='/api/fallback/${result.id}'`}
+                    data-theme="dark "
+                    class="bg-black w-full duration-150 hover:scale-105 text-xl text-center aspect-book"
+                    src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${result.cover}/public`}
+                    alt={result.title}
+                  />
+
+                  <div class="col-span-2 flex flex-col justify-between h-full">
+                    <div>
+                      <h2 class="font-poppins font-bold">{result.title}</h2>
+                      <a href={"/author/" + result.userId} class="font-poppins text-sm link">
+                        {result.userName}
+                      </a>
+                      <p class="text-sm mt-2">
+                        {stripHtml(result.description ?? "")
+                          .result.split(" ")
+                          .slice(0, 10)
+                          .join(" ")}
+                      </p>
+                    </div>
+                    <a href={"/book/" + result.id} class="btn btn-outline mt-2">
+                      View Book
+                    </a>
+                  </div>
+                </div>
+                {(index + 1) % 2 === 0 && index > 0 && (
+                  <div class="col-span-1 md:col-span-2">
+                    <AdPlacement
+                      page="Books"
+                      type="afterTwoBooks"
+                      adIndex={Math.floor(index / 2)}
+                    />
+                  </div>
+                )}
+              </>
+            ))}
+          </section>
+        ) : null
+      }
+    </div>
+  </div>
+</SiteLayout>

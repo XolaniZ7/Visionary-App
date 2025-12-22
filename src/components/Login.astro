@@ -1,0 +1,66 @@
+---
+import LoginForm from "./LoginForm";
+---
+
+<a href="/login" class="btn btn-outline btn-primary md:btn-md md:px-6 hidden md:inline-flex"
+  >Login</a
+>
+<input type="checkbox" id="loginForm" class="modal-toggle" />
+<label
+  for="loginForm"
+  class="modal cursor-pointer bg-gray-500 bg-opacity-20 backdrop-blur-lg rounded drop-shadow-lg"
+>
+  <label class="modal-box relative" for="">
+    <div class="flex flex-col justify-center items-center gap-10">
+      <h3 class="text-lg font-bold">Login</h3>
+      <LoginForm client:idle />
+    </div>
+  </label>
+</label>
+
+<style lang="scss"></style>
+
+<script>
+  // import { signIn } from "@astro-auth/client";
+  // import z, { ZodError } from "zod";
+  // import { zfd } from "zod-form-data";
+
+  // const signInWithEmailAndPassword = (email: string, password: string) => {
+  //   signIn({
+  //     provider: "credential",
+  //     login: {
+  //       email,
+  //       password,
+  //     },
+  //   });
+  // };
+
+  // const schema = zfd.formData({
+  //   email: zfd.text(),
+  //   password: zfd.text(),
+  // });
+
+  // const loginForm = document.getElementById("login-form-astro") as HTMLFormElement;
+  // if (loginForm) {
+  //   loginForm.onsubmit = (e) => {
+  //     e.preventDefault();
+  //     const data = new FormData(loginForm);
+  //     const dataObject = schema.safeParse(data);
+  //     if (dataObject.success) {
+  //       signInWithEmailAndPassword(dataObject.data.email, dataObject.data.password);
+  //     } else {
+  //       console.log(dataObject.error.formErrors);
+  //     }
+  //   };
+  // }
+
+  // const googleLoginButton = document.getElementById("google-login-button");
+  // if (googleLoginButton) {
+  //   googleLoginButton.addEventListener("click", () => {
+  //     signIn({
+  //       callbackURL: "/dashboard",
+  //       provider: "google",
+  //     });
+  //   });
+  // }
+</script>

@@ -1,0 +1,45 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { z } from "zod";
+
+import { p } from "@server/db";
+import { hasValidSignature } from "@server/security";
+import { InvoiceStatus } from "@server/subscriptionLogic";
+
+const invoiceIdParam = Astro.url.searchParams.get("invoice_id");
+const invoiceId = z.coerce.number().parse(invoiceIdParam);
+const urlIsValid = hasValidSignature(Astro.url.toString());
+if (!urlIsValid) return Astro.redirect("/login")
+---
+
+<SiteLayout title="Payment Success">
+  <div>
+    <div class="container mx-auto p-4 flex items-center justify-center">
+      <div class="w-full max-w-md">
+        <div class="card-body">
+          <div class="flex justify-center mb-4">
+            <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"
+            ></script>
+            <lottie-player
+              src="https://assets6.lottiefiles.com/packages/lf20_fmgZybfFUk.json"
+              background="transparent"
+              speed="1"
+              style="width: 400px; height: 400px;"
+              loop
+              autoplay
+              class="-m-10"></lottie-player>
+          </div>
+          <div class="flex justify-center text-2xl">
+            <h2 class="card-title text-center mb-4">Thank You!</h2>
+          </div>
+          <p class="text-center">
+            You have successfully subscribed and joined Visionary Writings Plus.
+          </p>
+          <div class="mt-6 flex justify-center">
+            <a href="/app/billing" class="btn btn-primary"> View subscription</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</SiteLayout>

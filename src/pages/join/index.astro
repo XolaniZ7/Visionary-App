@@ -1,0 +1,35 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+---
+
+<SiteLayout title="Join Us">
+  <div class="container mx-auto text-center flex flex-col gap-8 p-2 md:p-14 font-poppins">
+    <h1 class="text-4xl">Join Visionary Writings</h1>
+    <div class="flex flex-col lg:flex-row gap-3">
+      <section class="flex flex-col gap-8 p-8 rounded-lg bg-base-300 shadow-md w-full items-center">
+        <h2 class="text-2xl">Readers</h2>
+        <img
+          src="https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/f89fbf29-6770-46f7-7864-66a17c5cc000/Thumbnail"
+          class="w-52"
+        />
+        <p>
+          Discover a world of captivating stories and unforgettable characters - sign up as a reader
+          and let the literary adventure begin!
+        </p>
+        <a href="/join/reader" class="btn btn-primary">Sign Up</a>
+      </section>
+      <section class="flex flex-col gap-8 p-8 rounded-lg bg-base-300 shadow-md w-full items-center">
+        <h2 class="text-2xl">Authors</h2>
+        <img
+          src="https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/f20ac48e-df57-4b64-cd67-ec7093432500/Thumbnail"
+          class="w-52"
+        />
+        <p>
+          Share your unique stories and talent with the world - join us as an author and showcase
+          your stories to a massive audience!
+        </p>
+        <a href="/join/author" class="btn btn-primary">Sign Up</a>
+      </section>
+    </div>
+  </div>
+</SiteLayout>

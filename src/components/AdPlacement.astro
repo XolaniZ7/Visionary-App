@@ -1,0 +1,68 @@
+---
+import { getUser } from "@server/astroHelpers";
+import { hasValidSubscription, p } from "@server/db";
+
+type AdType = "Top" | "afterTwoBooks" | "aftertwochapters" | "inChapters" | "sidebar" | "Bottom";
+type AdPage = "Books" | "Chapters" | "reading_page";
+
+interface Props {
+  type: AdType;
+  page: AdPage;
+  pageContent?: string[];
+  adIndex?: number;
+}
+
+const { type, page, pageContent = [], adIndex } = Astro.props;
+const ads = await p.ads.findMany({ where: { type, page, status: true } });
+
+const user = await getUser(Astro.request);
+const isPro = user ? await hasValidSubscription(user.id) : false;
+
+const rlinks = await p.rlinks.findMany({ where: { status: 1 } });
+const rwords = await p.rkeywords.findMany({ where: { status: 1 } });
+
+const isRestrictedLink = rlinks.some((link) => link.link === Astro.request.url);
+let isRestrictedWord = false;
+
+for (const rword of rwords) {
+  for (const content of pageContent) {
+    if (content.includes(rword.keyword)) {
+      console.log(`Keyword "${rword.keyword}" is found in the content: "${content}"`);
+      isRestrictedWord = true;
+    }
+  }
+}
+
+const showAds = !isPro && !isRestrictedLink && !isRestrictedWord;
+const adAtIndex = adIndex ? ads[adIndex] : null;
+---
+
+{
+  showAds ? (
+    adIndex !== undefined ? (
+      adAtIndex?.code ? (
+        <div class="my-8 flex flex-col gap-1 bg-base-100">
+          <div class="flex justify-center">
+            <div class="badge">Advertisement</div>
+          </div>
+          <div data-page={page} data-type={type}>
+            <div set:html={adAtIndex.code} />
+          </div>
+        </div>
+      ) : null
+    ) : (
+      <div class="my-8 flex flex-col gap-1 bg-base-100">
+        <div class="flex justify-center">
+          <div class="badge">Advertisement</div>
+        </div>
+        <div class="min-h-16" data-page={page} data-type={type}>
+          {ads.map((ad) => (
+            <div set:html={ad.code} />
+          ))}
+        </div>
+      </div>
+    )
+  ) : (
+    <div class={`noAd ${isPro} ${isRestrictedLink} ${isRestrictedWord}`} />
+  )
+}

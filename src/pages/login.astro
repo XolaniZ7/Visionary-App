@@ -1,0 +1,31 @@
+---
+import LoginForm from "@components/LoginForm";
+import SiteLayout from "@layouts/SiteLayout.astro";
+
+import { getUser } from "@server/astroHelpers";
+
+const user = await getUser(Astro.request);
+---
+
+<SiteLayout title="Login">
+  <div
+    class="container mx-auto items-center text-center flex flex-col gap-8 p-2 md:p-14 font-poppins"
+  >
+    <h1 class="text-4xl">Login</h1>
+
+    <section class="flex w-full max-w-lg flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md">
+      {
+        !user ? (
+          <LoginForm client:idle />
+        ) : (
+          <div class="flex flex-col gap-3">
+            <h2>You are already logged in</h2>
+            <a href="/app" class="btn btn-primary">
+              Dashboard
+            </a>
+          </div>
+        )
+      }
+    </section>
+  </div>
+</SiteLayout>

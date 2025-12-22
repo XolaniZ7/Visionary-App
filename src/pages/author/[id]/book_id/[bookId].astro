@@ -1,0 +1,6 @@
+---
+const { id, bookId } = Astro.params;
+return Astro.redirect("/book/"+bookId)
+---
+
+<p>{id} {bookId}</p>

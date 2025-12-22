@@ -1,0 +1,320 @@
+---
+import TrpcWrapper from "@app/components/TrpcWrapper";
+import AdPlacement from "@components/AdPlacement.astro";
+import BookComponent from "@components/Book.astro";
+import { titleCase } from "@components/BookSection.astro";
+import Pagination from "@components/Pagination.astro";
+import ReadNow from "@components/ReadNow.astro";
+import SaveBook from "@components/SaveBook";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { sql } from "kysely";
+import { stripHtml } from "string-strip-html";
+import { z } from "zod";
+
+import { getUser } from "@server/astroHelpers";
+import { hasValidSubscription, k, p } from "@server/db";
+
+const { bookId: id } = Astro.params;
+const bookId = z.coerce.number().parse(id);
+const book = await p.book.findFirstOrThrow({
+  where: { id: bookId, status: "1" },
+  include: { user: true },
+});
+const totalChapters = await k
+  .selectFrom("Chapter")
+  .select(k.fn.count<number>("Chapter.id").as("count"))
+  .where("Chapter.book_id", "=", bookId)
+  .where("Chapter.deleted_at", "is", null)
+  .where("Chapter.status", "=", 1)
+  .executeTakeFirst();
+
+const coverUrl2 = `https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${book.book_cover}/public`;
+
+const similarBooks = await k
+  .selectFrom("book")
+  .innerJoin("users", "users.id", "user_id")
+  .innerJoin("Chapter", "Chapter.book_id", "book.id")
+  .where("book.complete", "=", "1")
+  .where("book.status", "=", "1")
+  .where("users.verified", "=", 1)
+  .where("users.active", "=", 1)
+  .where("genre", "=", book.genre)
+  .orWhere("user_id", "=", book.user_id)
+  .select([
+    "book.description",
+    "book.id as id",
+    "book.title as title",
+    "book.slug as slug",
+    "book.book_cover as cover",
+    "book.user_id as userId",
+    "users.name as userName",
+    k.fn.count<number>("Chapter.id").as("totalChapters"),
+  ])
+  .having(k.fn.count("Chapter.id"), ">", 20)
+  .having("book.id", "!=", bookId)
+  .orderBy(sql`user_id=${book.user_id}`, "desc")
+  .orderBy("book.views", "desc")
+  .groupBy("book.id")
+  .limit(4)
+  .execute();
+
+const pageParam = Astro.url.searchParams.get("page");
+const pageN = z.coerce.number().parse(pageParam);
+
+const page = pageN || 1; // set a default page number
+const pageSize = 10; // set a default page size
+const offset = (page - 1) * pageSize;
+
+const chapters = await k
+  .selectFrom("Chapter")
+  .select(["id", "title"])
+  .where("book_id", "=", bookId)
+  .where("Chapter.deleted_at", "is", null)
+  .where("Chapter.status", "=", 1)
+  .orderBy("created_at")
+  .offset(offset)
+  .limit(pageSize)
+  .orderBy("id")
+  .execute();
+
+const titles = chapters.map((x) => x.title).join(" ");
+
+if (!Astro.cookies.has("astroSessionId")) {
+  console.log("adding cookie");
+  const newSession = crypto.randomUUID();
+  Astro.cookies.set("astroSessionId", newSession);
+  Astro.response.headers.append("astroSessionId", newSession);
+}
+
+const sessionId = Astro.cookies.get("astroSessionId");
+
+const user = await getUser(Astro.request);
+if (user) {
+  const chkuser = await k
+    .selectFrom("books_view_count")
+    .select((eb) => eb.fn.count<number>("id").as("count"))
+    .where("book_id", "=", bookId)
+    .where("logged_in_user_id", "=", user.id)
+    .executeTakeFirstOrThrow();
+
+  if (chkuser.count === 0) {
+    await p.books_view_count.create({
+      data: {
+        session_id: sessionId.value,
+        book_id: bookId,
+        logged_in_user_id: user.id,
+      },
+    });
+    await p.book.update({ where: { id: bookId }, data: { views: { increment: 1 } } });
+
+    const { bookViewCount } = await k
+      .selectFrom("books_view_count")
+      .select((eb) => eb.fn.count<number>("id").as("bookViewCount"))
+      .where("book_id", "=", bookId)
+      .executeTakeFirstOrThrow();
+
+    const amount = 0.000;
+    const type = "book";
+
+    await p.transaction.create({
+      data: {
+        user_id: book.user_id,
+        amount: amount,
+        type: type,
+        on_views: bookViewCount,
+        date: new Date(),
+      },
+    });
+    await p.users.update({ where: { id: book.user_id }, data: { amount: { increment: amount } } });
+    await p.users.updateMany({ where: { admin: true }, data: { amount: { increment: amount } } });
+  }
+} else {
+  const { sessionViewCount } = await k
+    .selectFrom("books_view_count")
+    .select((eb) => eb.fn.count<number>("id").as("sessionViewCount"))
+    .where("session_id", "=", sessionId.value ?? "")
+    .where("book_id", "=", bookId)
+    .executeTakeFirstOrThrow();
+  if (sessionViewCount == 0) {
+    await p.books_view_count.create({
+      data: {
+        session_id: sessionId.value,
+        book_id: bookId,
+      },
+    });
+    await p.book.update({ where: { id: bookId }, data: { views: { increment: 1 } } });
+
+    const { bookViewCount } = await k
+      .selectFrom("books_view_count")
+      .select((eb) => eb.fn.count<number>("id").as("bookViewCount"))
+      .where("book_id", "=", bookId)
+      .executeTakeFirstOrThrow();
+
+    const amount = 0.000;
+    const type = "book";
+
+    await p.transaction.create({
+      data: {
+        user_id: book.user_id,
+        amount: amount,
+        type: type,
+        on_views: bookViewCount,
+        date: new Date(),
+      },
+    });
+    await p.users.update({ where: { id: book.user_id }, data: { amount: { increment: amount } } });
+    await p.users.updateMany({ where: { admin: true }, data: { amount: { increment: amount } } });
+  }
+}
+---
+
+<SiteLayout title={`Book: ${book.title}`}>
+  <div class="p-2 lg:px-24 2xl:px-52 lg:py-16 min-h-full">
+    <AdPlacement
+      page="Chapters"
+      type="Top"
+      pageContent={[titles, book.title, book.description ?? ""]}
+    />
+    <div class="grid md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-12">
+      <div class="flex justify-center md:block">
+        <img
+          onerror={`this.onerror=null; this.src='/api/fallback/${book.id}'`}
+          data-theme="dark "
+          class="bg-black w-52 md:w-full rounded-2xl shadow-2xl text-xl text-center aspect-book object-cover"
+          src={coverUrl2}
+          alt={book.title}
+        />
+      </div>
+      <div class="md:col-span-2 xl:col-span-3">
+        <div class="flex flex-col items-center md:items-start">
+          <h1
+            class="text-2xl md:text-4xl text-center md:text-left font-poppins font-bold my-3 flex flex-col lg:flex-row gap-2 items-center"
+          >
+            {
+              book.exclusiveStatus === "Exclusive" && (
+                <div class="badge badge-accent border border-secondary p-4 flex gap-2 items-center">
+                  <img
+                    class="w-5"
+                    src="https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/78b70217-3179-4e31-4ae1-314817ccb300/public"
+                  />
+                  Premium
+                </div>
+              )
+            }
+            {book.title}
+          </h1>
+
+          <div class="mb-4">
+            <ReadNow primary={true} bookId={book.id} userId={user ? user.id : null} />
+          </div>
+        </div>
+        <div class="text-center md:text-left" set:html={book.description} />
+        <h2 class="text-2xl font-poppins font-bold my-3 mt-12 leading-tight">Details</h2>
+        <div class="grid grid-cols-3">
+          <p class="font-poppins font-bold">Status</p>
+          {
+            book.complete === "1" ? (
+              <p class="col-span-2 font-poppins badge badge-success p-3 font-bold">Complete</p>
+            ) : (
+              <p class="col-span-2 font-poppins">
+                Work in Progress - This book has not been completed yet
+              </p>
+            )
+          }
+        </div>
+        <div class="divider m-0"></div>
+        <div class="grid grid-cols-3">
+          <p class="font-poppins font-bold">Genre</p>
+          <p class="col-span-2 font-poppins">{book.genre ?? "N/A"}</p>
+        </div>
+        <div class="divider m-0"></div>
+        <div class="grid grid-cols-3">
+          <p class="font-poppins font-bold">Total Chapters</p>
+          <p class="col-span-2 font-poppins">{totalChapters?.count ?? 0}</p>
+        </div>
+        <div class="divider m-0"></div>
+        <div class="grid grid-cols-3">
+          <p class="font-poppins font-bold">Views</p>
+          <p class="col-span-2 font-poppins">{book.views}</p>
+        </div>
+        <section>
+          <h2 class="text-2xl font-poppins font-bold my-3 mt-12">Table of Contents</h2>
+          <div class="flex flex-col gap-2">
+            {
+              chapters.map((chapter, index) => (
+                <>
+                  <a
+                    href={`/book/${bookId}/chapter/${chapter.id}`}
+                    class="cursor-pointer duration-150 hover:-translate-y-1 p-3 bg-base-300 shadow-sm rounded-md"
+                  >
+                    <span>{chapter.title}</span>
+                  </a>
+                  {(index + 1) % 2 === 0 && index > 0 && (
+                    <AdPlacement
+                      page="Chapters"
+                      type="aftertwochapters"
+                      adIndex={Math.floor(index / 2)}
+                    />
+                  )}
+                </>
+              ))
+            }
+          </div>
+        </section>
+        <div class="flex justify-center my-3">
+          {
+            totalChapters?.count && totalChapters.count > pageSize && (
+              <Pagination
+                currentPage={page}
+                pageSize={pageSize}
+                siblingCount={0}
+                totalCount={totalChapters.count}
+              />
+            )
+          }
+        </div>
+      </div>
+      <div class="md:col-span-4 xl:col-span-4">
+        <h3 class="text-2xl text-center font-poppins font-bold my-3 mt-12">Similar Books</h3>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {
+            similarBooks.map((book) => (
+              <div class="bg-base-300 w-full shadow-md grid grid-cols-3 gap-3 p-4 rounded-lg justify-center items-center">
+                <img
+                  onerror={`this.onerror=null; this.src='/api/fallback/${book.id}'`}
+                  data-theme="dark "
+                  class="bg-black w-full duration-150 hover:scale-105 text-xl text-center aspect-book"
+                  src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${book.cover}/public`}
+                  alt={book.title}
+                />
+
+                <div class="col-span-2 flex flex-col justify-between h-full">
+                  <div>
+                    <h2 class="font-poppins font-bold">{book.title}</h2>
+                    <a href={"/author/" + book.userId} class="font-poppins text-sm link">
+                      {book.userName}
+                    </a>
+                    <p class="text-sm mt-2">
+                      {stripHtml(book.description ?? "")
+                        .result.split(" ")
+                        .slice(0, 10)
+                        .join(" ")}
+                    </p>
+                  </div>
+                  <a href={"/book/" + book.id} class="btn btn-outline mt-2">
+                    View Book
+                  </a>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+    <AdPlacement
+      page="Chapters"
+      type="Bottom"
+      pageContent={[titles, book.title, book.description ?? ""]}
+    />
+  </div>
+</SiteLayout>

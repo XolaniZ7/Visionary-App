@@ -1,0 +1,180 @@
+---
+//import { getUser } from "@astro-auth/core";
+import Navbar from "@components/Navbar.astro";
+import { getSession } from "auth-astro";
+import { Auth } from "auth-astro/components";
+
+import { authOpts } from "@server/authOpts";
+
+import Layout from "./Layout.astro";
+
+export interface Props {
+  title: string;
+}
+
+const user = await getSession(Astro.request, authOpts);
+console.log({ user });
+
+const { title } = Astro.props as Props;
+---
+
+<Layout title={title}>
+  <Auth authOpts={authOpts}>
+    <Navbar />
+    <div class="h-full">
+      <slot />
+    </div>
+    <div class="btm-nav btm-nav-lg lg:hidden bg-base-200 shadow-2xl border-t-1 border-info">
+      <a href="/">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          ><path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+          ></path></svg
+        >
+        <span class="btm-nav-label">Home</span>
+      </a>
+      <a href="/books">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+          ></path>
+        </svg>
+
+        <span class="btm-nav-label">Browse</span>
+      </a>
+      <a href="/library">
+        <svg
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          viewBox="0 0 24 24"
+          class="w-6 h-6"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+
+        <span class="btm-nav-label">Library</span>
+      </a>
+      <a href="/search">
+        <svg
+          class="h-6 w-6"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        <span class="btm-nav-label">Search</span>
+      </a>
+      {
+        !user ? (
+          <a href="/login">
+            <svg
+              class="h-6 w-6"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="btm-nav-label">Login</span>
+          </a>
+        ) : (
+          <a href="/app">
+            <svg
+              class="h-6 w-6"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="btm-nav-label">Dash</span>
+          </a>
+        )
+      }
+    </div>
+    <footer class="footer footer-center p-10 bg-base-200 text-base-content rounded">
+      <div class="grid grid-flow-col gap-4">
+        <a href="/about" class="link link-hover">About us</a>
+        <a href="/contact" class="link link-hover">Contact</a>
+        <a href="/terms" class="link link-hover">Terms & Privacy Policy</a>
+        <a href="/faq" class="link link-hover">FAQ</a>
+      </div>
+      <div>
+        <div class="grid grid-flow-col gap-4">
+          <a href="https://twitter.com/VWritings" target="_blank"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              class="fill-current"
+              ><path
+                d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"
+              ></path>
+            </svg>
+          </a>
+
+          <a href="https://www.facebook.com/visionarywritings/" target="_blank"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              class="fill-current"
+              ><path
+                d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"
+              ></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div>
+        <p>Copyright © {new Date().getFullYear()} Visionary Writings</p>
+      </div>
+    </footer>
+  </Auth>
+</Layout>

@@ -1,0 +1,142 @@
+$border-medium: 15px;
+$dark-blue: #132239;
+$main-blue: #1b8ff5;
+$main-orange: #ff7529;
+$main-box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+
+// Small tablets and large smartphones (landscape view)
+$screen-sm-min: 576px;
+
+// Small tablets (portrait view)
+$screen-md-min: 768px;
+
+// Tablets and small desktops
+$screen-lg-min: 992px;
+
+// Large tablets and desktops
+$screen-xl-min: 1200px;
+
+// Small devices
+@mixin sm {
+  @media (min-width: #{$screen-sm-min}) {
+    @content;
+  }
+}
+
+// Medium devices
+@mixin md {
+  @media (min-width: #{$screen-md-min}) {
+    @content;
+  }
+}
+
+// Large devices
+@mixin lg {
+  @media (min-width: #{$screen-lg-min}) {
+    @content;
+  }
+}
+
+// Extra large devices
+@mixin xl {
+  @media (min-width: #{$screen-xl-min}) {
+    @content;
+  }
+}
+
+
+.billing-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: 20px;
+  width: 100%;
+}
+.billing-cards-container {
+  width: 100%;
+
+  display: flex;
+  gap: 20px;
+  flex-direction: column;
+
+  @include sm {
+    //padding-left: 12em;
+    //padding-right: 12em;
+    flex-direction: row;
+  }
+
+  .billing-card {
+    //background-color: $main-blue;
+    position: relative;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: $dark-blue;
+    width: 100%;
+    border-radius: 7px;
+    padding: 1.5em;
+    box-shadow: rgba(0, 0, 0, 0.116) 0px 6px 24px 0px,
+      rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
+  }
+
+  .Plan-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .plan-wrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: absolute;
+      right: 15px;
+      top: 15px;
+
+      .plan-heading {
+        span {
+          background-color: $dark-blue;
+          color: white;
+          padding: 5px;
+          padding-left: 7px;
+          padding-right: 7px;
+          border-radius: 7px;
+        }
+      }
+    }
+
+    .pricing-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      .frequency {
+        text-transform: lowercase;
+        color: gray;
+        font-size: medium;
+        font-weight: lighter;
+        margin-top: 20px;
+      }
+
+      font-size: 3em;
+      font-weight: 900;
+    }
+    @include sm {
+      width: 60%;
+    }
+  }
+
+  .Next-payment {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 1em;
+    .next-payment-heading {
+      font-size: smaller;
+      color: gray;
+    }
+    @include sm {
+      width: 40%;
+    }
+  }
+}

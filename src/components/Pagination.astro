@@ -1,0 +1,74 @@
+---
+import { DOTS, usePagination } from 'src/shared/paginationHelper';
+
+interface Props {
+  totalCount: number;
+  pageSize: number;
+  siblingCount: number;
+  currentPage: number;
+}
+
+const { totalCount, pageSize, siblingCount, currentPage } = Astro.props as Props;
+
+const paginationRange = usePagination({
+    currentPage,
+    totalCount,
+    siblingCount,
+    pageSize
+  });
+
+   // If there are less than 2 times in pagination range we shall not render the component
+   if (!paginationRange || currentPage === 0 || paginationRange.length < 2) {
+    return null;
+  }
+
+  const lastPage = paginationRange.at(-1)
+
+---
+
+<div>
+  <ul class="btn-group">
+    {/* Left navigation arrow */}
+    {
+      currentPage && currentPage > 1 ? (
+        <a href={`?page=${currentPage - 1}`} class="btn btn-primary">
+          <div>«</div>
+        </a>
+      ) : (
+        <a class="btn btn-disabled">
+          <div>«</div>
+        </a>
+      )
+    }
+    {
+      paginationRange.map((pageNumber) => {
+        // If the pageItem is a DOT, render the DOTS unicode character
+        if (pageNumber === DOTS) {
+          return null;
+        }
+
+        // Render our Page Pills
+        return (
+          <a
+            href={`?page=${pageNumber}`}
+            class={`btn ${pageNumber === currentPage ? "btn-info" : "btn-primary"}`}
+          >
+            {pageNumber}
+          </a>
+        );
+      })
+    }
+    {/*  Right Navigation arrow */}
+    {
+      currentPage && lastPage && currentPage < lastPage ? (
+        <a href={`?page=${currentPage + 1}`} class="btn btn-primary">
+          <div>»</div>
+        </a>
+      ) : (
+        <a class="btn btn-disabled">
+          <div>»</div>
+        </a>
+      )
+    }
+  </ul>
+</div>

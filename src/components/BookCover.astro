@@ -1,0 +1,28 @@
+---
+import type { book } from ".prisma/client";
+import type { FeaturedBook } from "@server/db";
+
+type Props = {
+  book: FeaturedBook;
+};
+
+const { book } = Astro.props as Props;
+const coverBaseUrl = "https://visionarywritings.com/public/books/uploads/" + book.cover;
+const coverUrl2 = `https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/uploads/${book.cover}/public`;
+---
+
+<a href={"/book/" + book.id} class="bg-black book-cover w-full d text-xl text-center">
+  <img
+    onerror={`this.onerror=null; this.src='/api/fallback/${book.id}'`}
+    data-theme="dark"
+    class="bg-black w-96 book-cover duration-150 hover:scale-105 rounded-xl text-xl text-center object-cover object-center shadow-md"
+    src={coverUrl2}
+    alt={book.title}
+  />
+</a>
+
+<style is:global lang="scss">
+  .book-cover {
+    aspect-ratio: 4.25 / 6;
+  }
+</style>

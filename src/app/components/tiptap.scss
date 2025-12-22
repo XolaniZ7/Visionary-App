@@ -1,0 +1,67 @@
+
+.ProseMirror-focused {
+  
+  border: none;
+  outline: none;
+ }
+
+ .ProseMirror {
+  min-height: 320px;
+  overflow-y: auto;
+
+  h1 {
+    font-size: xx-large !important;
+   }
+   h2 {
+    font-size: large !important;
+   }
+ }
+
+
+
+//  html[data-theme="light"] {
+//   .toolbar {
+//     gap: 0.5em;
+//     button, input, select {
+//         font-size: inherit;
+//         font-family: inherit;
+//         color: #000;
+//         margin: .1rem;
+//         border: 1px solid black;
+//         border-radius: .3rem;
+//         padding: .1rem .4rem;
+//         background: white;
+//         accent-color: black;
+
+//         &.is-active {
+//             background: black;
+//             color: #fff;
+//           }  
+//     }
+//   }
+// }
+
+// html[data-theme="dark"] {
+//   .toolbar {
+//     gap: 0.5em;
+//     button, input, select {
+//         font-size: inherit;
+//         font-family: inherit;
+//         color: white;
+//         margin: .1rem;
+//         border: 1px solid #79709c;
+//         border-radius: .3rem;
+//         padding: .1rem .4rem;
+//         background: #423d57;
+//         accent-color: black;
+
+//         &.is-active {
+//             background: #1d1a2c;
+//             color: #fff;
+//           }  
+//     }
+//   }
+// }
+
+
+

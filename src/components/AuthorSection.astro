@@ -1,0 +1,76 @@
+---
+type Authors = {
+  id: number;
+  name: string;
+  avatar: string | null;
+}[];
+
+interface Props {
+  authors: Authors;
+  key: string;
+  sectionTitle: string;
+}
+
+const { authors, key, sectionTitle } = Astro.props;
+
+export const titleCase = (str: string) => {
+  return str.toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
+};
+---
+
+<section class={`glide_${key} mt-10`} aria-label={sectionTitle}>
+  <h3 class="font-bold text-2xl mx-2 md:text-center my-6">{sectionTitle}</h3>
+  <div class="glide__track" data-glide-el="track">
+    <ul class="glide__slides">
+      {
+        authors.map((author) => (
+          <li class="glide__slide p-2">
+            <a class="w-full" href={"/author/" + author.id}>
+              <div class="glide__slide flex flex-col">
+                <div class="avatar flex justify-center aspect-square w-full">
+                  <div class="rounded-full h-fit ring ring-primary ring-offset-base-100 ring-offset-2">
+                    <img
+                      class=""
+                      onerror={`this.onerror=null; this.src='/kq6bujqw.bmp'`}
+                      src={`https://imagedelivery.net/sdqQx4FWOKQ_S_S-shOoYw/avatars/${author.avatar}/Thumbnail`}
+                    />
+                  </div>
+                </div>
+                <div class="flex flex-col justify-between py-2 items-center gap-5 w-full">
+                  <div class="flex flex-col justify-center items-center mt-2 w-full">
+                    <p class="text-lg text-center w-full truncate">{titleCase(author.name)}</p>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<script define:vars={{ key }}>
+  //import Glide from "@glidejs/glide";
+
+  //@ts-ignore
+  new Glide(`.glide_${key}`, {
+    type: "carousel",
+    gap: 20,
+    startAt: 0,
+    perView: 10,
+    peek: { before: 0, after: 110 },
+    breakpoints: {
+      1024: {
+        perView: 5,
+        gap: 1,
+        peek: { before: 0, after: 100 },
+      },
+      720: {
+        perView: 2,
+        gap: 1,
+        peek: { before: 0, after: 100 },
+      },
+    },
+  }).mount();
+</script>

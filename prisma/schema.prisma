@@ -1,0 +1,481 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Chapter {
+  id              Int             @id @default(autoincrement()) @db.UnsignedInt
+  title           String          @db.VarChar(255)
+  slug            String          @db.VarChar(255)
+  book_id         Int
+  status          Boolean         @default(false)
+  chapter_content String          @db.Text
+  chapter_cover   String?         @db.VarChar(255)
+  deleted_at      DateTime?       @db.Timestamp(0)
+  created_at      DateTime?       @default(now()) @db.Timestamp(0)
+  updated_at      DateTime?       @updatedAt
+  book            book            @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  book_progress   book_progress[]
+
+  @@index([book_id], map: "book_id")
+  @@index([book_id, title], map: "idx_Chapter_book_id_title")
+  @@index([book_id, deleted_at, created_at], map: "ix_bookid_deleted_created")
+  @@index([slug, deleted_at], map: "ix_slug_deleted")
+  @@index([title, slug, book_id, status, chapter_cover], map: "title")
+}
+
+model ads {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  code       String?   @db.VarChar(5000)
+  type       String?   @db.VarChar(255)
+  status     Boolean   @default(false)
+  page       String    @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt
+}
+
+model authors_view_count {
+  id                Int      @id @default(autoincrement())
+  user_id           Int
+  logged_in_user_id Int      @default(0)
+  device_id         String?  @db.VarChar(255)
+  session_id        String?  @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @updatedAt
+  deleted_at        String?  @db.VarChar(255)
+
+  @@index([logged_in_user_id], map: "logged_in_user_id")
+  @@index([session_id], map: "session_id")
+  @@index([user_id], map: "user_id")
+  @@index([session_id, user_id], map: "idx_authors_view_count_session_id_user_id")
+  @@index([user_id, logged_in_user_id], map: "idx_authors_view_count_user_id_logged_in_user_id")
+}
+
+model bank_details {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  name           String   @db.VarChar(50)
+  surname        String   @db.VarChar(50)
+  bank_name      String   @db.VarChar(255)
+  account_number String   @db.VarChar(100)
+  branch         String   @db.VarChar(100)
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+  updated_at     DateTime @default(now()) @updatedAt
+}
+
+model book {
+  id               Int             @id @default(autoincrement())
+  title            String          @db.VarChar(255)
+  book_order       Int
+  slug             String          @db.VarChar(255)
+  status           String          @default("0") @db.VarChar(255)
+  complete         String          @db.VarChar(255)
+  genre            String?         @db.VarChar(190)
+  description      String?         @db.Text
+  book_cover       String          @default("no_image.png") @db.VarChar(255)
+  deleted_at       DateTime?       @db.Timestamp(0)
+  created_at       DateTime        @default(now()) @db.Timestamp(0)
+  updated_at       DateTime        @default(now()) @updatedAt @db.Timestamp(0)
+  user_id          Int
+  views            Int?            @default(0)
+  user             users           @relation(fields: [user_id], references: [id])
+  Chapter          Chapter[]
+  saved_book       saved_book[]
+  exclusiveStatus  ExclusiveStatus @default(NotExclusive)
+  exclusiveMessage String?
+  book_progress    book_progress[]
+
+  @@index([status], map: "idx_book_status")
+  @@index([genre], map: "ix_genre")
+  @@index([title, genre, book_cover], map: "title")
+  @@index([user_id], map: "user_id")
+  @@index([exclusiveStatus], map: "exclusiveStatus")
+}
+
+enum ExclusiveStatus {
+  NotExclusive
+  Review
+  Exclusive
+}
+
+model books_view_count {
+  id                Int      @id @default(autoincrement())
+  book_id           Int
+  logged_in_user_id Int      @default(0)
+  device_id         String?  @db.VarChar(255)
+  session_id        String?  @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  deleted_at        String?  @db.VarChar(255)
+
+  @@index([book_id, logged_in_user_id], map: "ix_book_logged_id")
+  @@index([session_id, book_id], map: "ix_sessionid_book_id")
+}
+
+model premium_books_view_count {
+  id                Int      @id @default(autoincrement())
+  book_id           Int
+  logged_in_user_id Int      @default(0)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([book_id, logged_in_user_id], map: "ix_book_logged_id")
+}
+
+model comments {
+  id         Int      @id @default(autoincrement())
+  chapter_id Int
+  user_id    Int
+  user_email String   @db.VarChar(255)
+  user_name  String   @db.VarChar(255)
+  comment    String   @db.Text
+  reply_to   Int
+  status     Int
+  approve    Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([chapter_id, approve, status, reply_to], map: "ix_comments")
+  @@index([user_email], map: "user_email")
+  @@index([user_id], map: "user_id")
+  @@index([user_name], map: "user_name")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model oauth_access_tokens {
+  id         String    @id @db.VarChar(100)
+  user_id    Int?
+  client_id  Int
+  name       String?   @db.VarChar(255)
+  scopes     String?   @db.Text
+  revoked    Boolean
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  expires_at DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "oauth_access_tokens_user_id_index")
+}
+
+model oauth_auth_codes {
+  id         String    @id @db.VarChar(100)
+  user_id    Int
+  client_id  Int
+  scopes     String?   @db.Text
+  revoked    Boolean
+  expires_at DateTime? @db.DateTime(0)
+}
+
+model oauth_clients {
+  id                     Int       @id @default(autoincrement()) @db.UnsignedInt
+  user_id                Int?
+  name                   String    @db.VarChar(255)
+  secret                 String    @db.VarChar(100)
+  redirect               String    @db.Text
+  personal_access_client Boolean
+  password_client        Boolean
+  revoked                Boolean
+  created_at             DateTime? @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+
+  @@index([user_id], map: "oauth_clients_user_id_index")
+}
+
+model oauth_personal_access_clients {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  client_id  Int
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+
+  @@index([client_id], map: "oauth_personal_access_clients_client_id_index")
+}
+
+model oauth_refresh_tokens {
+  id              String    @id @db.VarChar(100)
+  access_token_id String    @db.VarChar(100)
+  revoked         Boolean
+  expires_at      DateTime? @db.DateTime(0)
+
+  @@index([access_token_id], map: "oauth_refresh_tokens_access_token_id_index")
+}
+
+model password_resets {
+  id         Int       @id @default(autoincrement())
+  email      String    @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+
+  @@index([email(length: 191)], map: "password_resets_email_index")
+}
+
+model payments_global_settings {
+  id              Int     @unique(map: "id") @default(autoincrement()) @db.TinyInt
+  sandbox_enabled Boolean @default(true)
+}
+
+model payments_invoice {
+  id                      Int                     @unique(map: "id") @default(autoincrement())
+  invoice_date            DateTime                @db.Date
+  customer_name           String                  @db.VarChar(255)
+  customer_email          String                  @db.VarChar(255)
+  user_id                 BigInt?                 @db.UnsignedBigInt
+  status_id               Int                     @default(1) @db.TinyInt
+  created_at              DateTime                @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?               @default(now()) @updatedAt @db.Timestamp(0)
+  payments_invoice_status payments_invoice_status @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_invoice_ibfk_1")
+  payments_invoice_item   payments_invoice_item[]
+
+  @@index([status_id], map: "status_id")
+}
+
+model payments_invoice_item {
+  id               Int              @unique(map: "id") @default(autoincrement())
+  name             String           @db.VarChar(255)
+  description      String?          @db.VarChar(255)
+  product_id       Int
+  cost             Decimal          @db.Decimal(20, 3)
+  created_at       DateTime         @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?        @default(now()) @updatedAt @db.DateTime(0)
+  invoice_id       Int
+  author_id        BigInt?          @db.UnsignedBigInt
+  note             String?          @db.Text
+  payments_invoice payments_invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade, map: "payments_invoice_item_ibfk_1")
+
+  @@index([invoice_id], map: "invoice_id")
+}
+
+model payments_invoice_status {
+  id               Int                @unique(map: "id") @default(autoincrement()) @db.TinyInt
+  name             String?            @db.VarChar(255)
+  payments_invoice payments_invoice[]
+}
+
+model payments_payfast_integration {
+  id               BigInt   @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
+  merchant_id      Int?
+  merchant_key     String?  @db.VarChar(255)
+  passphrase       String?  @db.VarChar(255)
+  integration_name String?  @db.VarChar(255)
+  url              String?  @db.VarChar(255)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamp(0)
+}
+
+model payments_payfast_itn {
+  id                BigInt    @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
+  m_payment_id      String?   @db.VarChar(100)
+  pf_payment_id     Int?
+  payment_status    String?   @db.VarChar(100)
+  item_name         String?   @db.VarChar(100)
+  item_description  String?   @db.VarChar(255)
+  amount_gross      Decimal?  @db.Decimal(20, 3)
+  amount_fee        Decimal?  @db.Decimal(20, 3)
+  amount_net        Decimal?  @db.Decimal(20, 3)
+  custom_int1       Int?
+  custom_int2       Int?
+  custom_int3       Int?
+  custom_int4       Int?
+  custom_int5       Int?
+  custom_str1       String?   @db.VarChar(255)
+  custom_str2       String?   @db.VarChar(255)
+  custom_str3       String?   @db.VarChar(255)
+  custom_str4       String?   @db.VarChar(255)
+  custom_str5       String?   @db.VarChar(255)
+  name_first        String?   @db.VarChar(100)
+  name_last         String?   @db.VarChar(100)
+  email_address     String?   @db.VarChar(100)
+  merchant_id       String?   @db.VarChar(8)
+  token             String?   @db.VarChar(36)
+  billing_date      DateTime? @db.Date
+  signature         String?   @db.VarChar(32)
+  all_checks_passed Boolean?
+  error_messages    String?   @db.VarChar(255)
+  created_at        DateTime  @default(now()) @db.Timestamp(0)
+  updated_at        DateTime  @default(now()) @db.Timestamp(0)
+}
+
+model payments_product {
+  id         Int     @unique(map: "id") @default(autoincrement())
+  name       String  @db.VarChar(255)
+  base_price Decimal @db.Decimal(10, 2)
+}
+
+model payments_subscription {
+  id                              Int                             @unique(map: "id") @default(autoincrement())
+  frequency_id                    Int                             @db.TinyInt
+  token                           String                          @unique(map: "UK_Token") @db.VarChar(36)
+  cycles                          Int
+  cycles_complete                 Int
+  run_date                        DateTime                        @db.DateTime(0)
+  status_id                       Int                             @db.TinyInt
+  amount                          Int
+  user_id                         BigInt                          @db.UnsignedBigInt
+  created_at                      DateTime                        @default(now()) @db.Timestamp(0)
+  updated_at                      DateTime                        @default(now()) @updatedAt @db.Timestamp(0)
+  payments_subscription_frequency payments_subscription_frequency @relation(fields: [frequency_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_subscription_ibfk_1")
+  payments_subscription_status    payments_subscription_status    @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payments_subscription_ibfk_2")
+
+  @@index([frequency_id], map: "frequency_id")
+  @@index([status_id], map: "status_id")
+}
+
+model payments_subscription_frequency {
+  id                    Int                     @unique(map: "id") @default(autoincrement()) @db.TinyInt
+  name                  String?                 @db.VarChar(255)
+  payfast_id            Int?                    @db.TinyInt
+  extension_name        String?                 @db.VarChar(255)
+  payments_subscription payments_subscription[]
+}
+
+model payments_subscription_status {
+  id                    Int                     @unique(map: "id") @default(autoincrement()) @db.TinyInt
+  name                  String?                 @db.VarChar(255)
+  payments_subscription payments_subscription[]
+}
+
+model profiles {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  avatar     String?   @default("avatar.png") @db.VarChar(255)
+  user_id    Int
+  about      String?   @db.Text
+  dob        String?   @db.VarChar(250)
+  gender     String?   @db.VarChar(10)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+
+  @@index([user_id], map: "ix_userid")
+}
+
+model rkeywords {
+  id      Int    @id @default(autoincrement())
+  keyword String @db.VarChar(250)
+  status  Int
+}
+
+model rlinks {
+  id     Int    @id @default(autoincrement())
+  link   String @db.Text
+  status Int
+}
+
+model smtpemail {
+  id                Int      @id @default(autoincrement())
+  MAIL_DRIVER       String   @db.VarChar(255)
+  MAIL_HOST         String   @db.VarChar(255)
+  MAIL_PORT         String   @db.VarChar(10)
+  MAIL_USERNAME     String   @db.VarChar(255)
+  MAIL_PASSWORD     String   @db.VarChar(255)
+  MAIL_FROM_ADDRESS String   @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamp(0)
+}
+
+model transaction {
+  id         Int       @id @default(autoincrement())
+  admin_id   Int       @default(0)
+  user_id    Int
+  amount     Decimal   @db.Decimal(20, 3)
+  type       String    @db.VarChar(255)
+  on_views   Int       @default(0)
+  date       DateTime? @db.Date
+  cron       Boolean   @default(false)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime  @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([admin_id], map: "admin_id")
+  @@index([user_id, cron, amount, date], map: "ix_transaction_cover")
+  @@index([user_id, on_views], map: "ix_userid_onviews")
+  @@index([user_id, on_views, cron, amount, date], map: "ix_userid_onviews_cron")
+  @@index([user_id], map: "user_id")
+}
+
+model users {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  email           String            @unique(map: "users_email_unique") @db.VarChar(100)
+  admin           Boolean           @default(false)
+  reader          Int               @default(0) @db.TinyInt
+  password        String?
+  amount          Decimal           @default(0.000) @db.Decimal(20, 3)
+  verified        Boolean           @default(false)
+  active          Boolean           @default(false)
+  phone           String?           @db.VarChar(250)
+  number_code     Int?
+  phone_verified  Boolean?
+  isVerified      Boolean?
+  email_token     String?           @db.VarChar(255)
+  remember_token  String?
+  lastname        String?           @db.VarChar(255)
+  username        String?           @db.VarChar(255)
+  approved_at     DateTime?         @db.Timestamp(0)
+  created_at      DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at      DateTime?         @updatedAt @db.Timestamp(0)
+  views           Int?              @default(0)
+  book            book[]
+  payment_request payment_request[]
+  saved_book      saved_book[]
+  book_progress   book_progress[]
+
+  @@index([admin], map: "idx_admin")
+  @@index([active, admin], map: "idx_users_active_admin")
+  @@index([active, admin, reader], map: "idx_users_active_admin_reader")
+  @@index([active, reader, admin, approved_at], map: "idx_users_active_reader_admin_approved_at")
+  @@index([active, verified], map: "idx_users_active_verified")
+  @@index([name], map: "idx_users_name")
+}
+
+model payment_request {
+  id         Int                  @id @default(autoincrement())
+  usersId    Int
+  amount     Decimal              @default(0.000) @db.Decimal(20, 3)
+  status     PaymentRequestStatus @default(PENDING)
+  created_at DateTime             @default(now())
+  updated_at DateTime             @updatedAt
+  user       users                @relation(fields: [usersId], references: [id])
+
+  @@index([usersId])
+}
+
+model saved_book {
+  id         Int      @id @default(autoincrement())
+  bookId     Int
+  usersId    Int
+  created_at DateTime @default(now())
+  book       book     @relation(fields: [bookId], references: [id])
+  user       users    @relation(fields: [usersId], references: [id])
+
+  @@unique([usersId, bookId])
+  @@index([bookId])
+  @@index([usersId])
+}
+
+model book_progress {
+  id         Int      @id @default(autoincrement())
+  usersId    Int
+  bookId     Int
+  chapterId  Int      @db.UnsignedInt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       users    @relation(fields: [usersId], references: [id])
+  book       book     @relation(fields: [bookId], references: [id])
+  chapter    Chapter  @relation(fields: [chapterId], references: [id])
+
+  @@unique([usersId, bookId])
+  @@index([bookId])
+  @@index([usersId])
+  @@index([chapterId])
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  COMPLETE
+  CANCELLED
+}

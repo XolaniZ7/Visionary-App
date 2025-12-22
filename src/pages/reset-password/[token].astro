@@ -1,0 +1,172 @@
+---
+import TextField from "@components/forms/TextField.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+
+import { formDataToJson, verifyCaptcha } from "@server/astroHelpers";
+import { p } from "@server/db";
+import { sendContactFormEmail, sendForgotPasswordEmail } from "@server/email";
+
+const decodedJwtSchema = z.object({
+  email: z.string().email(),
+  iat: z.number().int(),
+  exp: z.number().int(),
+});
+
+const { token } = Astro.params;
+
+const secretKey = process.env.ASTROAUTH_SECRET ?? "";
+let decoded = "";
+try {
+  decoded = jwt.verify(token ?? "", secretKey) as string;
+} catch {
+  decoded = "";
+}
+const parsedjwt = decodedJwtSchema.safeParse(decoded);
+
+const currentTimestamp = Math.floor(Date.now() / 1000);
+const validToken = parsedjwt.success && currentTimestamp < parsedjwt.data.exp;
+
+const schema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[!@#$%^&*()_+]/, "Password must contain at least one special character"),
+    confirmPassword: z.string(),
+  })
+  .superRefine(({ confirmPassword, password }, ctx) => {
+    if (confirmPassword !== password) {
+      ctx.addIssue({
+        path: ["confirmPassword"],
+        code: "custom",
+        message: "The passwords did not match",
+      });
+    }
+  });
+
+type FormErrorType = z.ZodError<z.infer<typeof schema>>;
+let errors: FormErrorType | null = null;
+let submittedData: z.infer<typeof schema> | null = null;
+
+let successMessage = "";
+let errorMessage = "";
+
+if (Astro.request.method === "POST") {
+  try {
+    const data = await Astro.request.formData();
+    submittedData = formDataToJson(data);
+    const parsedData = schema.safeParse(formDataToJson(data));
+
+    if (parsedData.success) {
+      console.log("Parse Success");
+      if (parsedjwt.success) {
+        await p.users.update({
+          where: { email: parsedjwt.data.email },
+          data: {
+            password: bcrypt.hashSync(parsedData.data.password),
+          },
+        });
+
+        successMessage = "Your password has been reset successfully";
+      }
+    } else {
+      errors = parsedData.error;
+      errorMessage =
+        "Oops! Looks like there are a few errors, could you please take a moment to fix them below?";
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+  }
+}
+---
+
+<SiteLayout title="forgot-password">
+  {
+    validToken ? (
+      <div class="container mx-auto items-center text-center flex flex-col gap-8 p-2 md:p-14 font-poppins">
+        <h1 class="text-4xl">Reset Password</h1>
+
+        <section class="flex w-full max-w-lg flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md">
+          {successMessage && (
+            <div class="alert alert-success shadow-lg">
+              <div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="stroke-current flex-shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>{successMessage}</span>
+              </div>
+            </div>
+            <a href="/login" class="btn btn-outline btn-primary">Click here to login</a>
+          )}
+          {errorMessage && (
+            <div class="alert alert-error shadow-lg rounded-sm">
+              <div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="stroke-current flex-shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>Error! {errorMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {!successMessage && (
+            <form method="post" class="flex flex-col gap-3">
+              <TextField
+                label="New Password"
+                name="password"
+                defaultValue={submittedData?.["password"]}
+                errors={errors?.formErrors.fieldErrors["password"]}
+                type="password"
+              />
+              <TextField
+                label="Confirm Password"
+                name="confirmPassword"
+                defaultValue={submittedData?.["confirmPassword"]}
+                errors={errors?.formErrors.fieldErrors["confirmPassword"]}
+                type="password"
+              />
+
+              <button type="submit" class="btn btn-primary w-full mt-8">
+                Reset Password
+              </button>
+            </form>
+          )}
+        </section>
+      </div>
+    ) : (
+      <div class="container mx-auto items-center text-center flex flex-col gap-8 p-2 md:p-14 font-poppins">
+        <section class="flex w-full max-w-lg flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md">
+          Token not Valid
+        </section>
+      </div>
+    )
+  }
+</SiteLayout>

@@ -1,0 +1,42 @@
+---
+import SiteLayout from "@layouts/SiteLayout.astro";
+
+import { k } from "../../server/db";
+
+const { token } = Astro.params;
+
+let message = "";
+
+if (token) {
+  const user = await k
+    .selectFrom("users")
+    .selectAll()
+    .where("email_token", "=", token)
+    .executeTakeFirst();
+  if (user) {
+    if (user.verified) {
+      message = "You are already verified";
+    } else {
+      await k.updateTable("users").set({ verified: 1 }).where("id", "=", user.id).execute();
+      message = "You have been verified";
+    }
+  } else {
+    message = "Error, Token does not exist";
+  }
+} else {
+  message = "Error, Token does not exist";
+}
+---
+
+<SiteLayout title="Verify Email">
+  <div
+    class="container mx-auto text-center flex flex-col items-center gap-8 p-2 md:p-14 font-poppins"
+  >
+    <h1 class="text-4xl">Welcome</h1>
+    <section class="flex w-full max-w-lg flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md">
+      <h2 class="text-2xl">{message}</h2>
+      <p>Login to your account:</p>
+      <div><a class="btn btn-primary" href="/login">Login</a></div>
+    </section>
+  </div>
+</SiteLayout>

@@ -1,0 +1,87 @@
+---
+import { sql } from "kysely";
+
+import { hasValidSubscription, k, p } from "@server/db";
+
+import SaveBook from "./SaveBook";
+
+interface Props {
+  bookId: number;
+  userId: number | null;
+  primary?: boolean;
+}
+
+const { bookId, userId, primary = false } = Astro.props as Props;
+
+const chapters = await k
+  .selectFrom("Chapter")
+  .select(["id", "title", sql<number>`ROW_NUMBER () OVER (ORDER BY created_at)`.as("row")])
+  .where("book_id", "=", bookId)
+  .where("Chapter.deleted_at", "is", null)
+  .where("Chapter.status", "=", 1)
+  .orderBy("created_at")
+  .execute();
+
+const firstChapter = chapters[0];
+const bookProgress = userId
+  ? await p.book_progress.findFirst({
+      where: { bookId: bookId, usersId: userId },
+      include: { chapter: true },
+    })
+  : null;
+
+const currentChapter = bookProgress ? bookProgress.chapterId : firstChapter.id;
+
+const currentChapterRow = chapters.find((x) => x.id === currentChapter);
+const currentChapterRowVal = currentChapterRow?.row;
+const lastChapterRow = chapters.at(-1);
+const lastChapterRowVal = lastChapterRow?.row;
+
+let progressAmount = 0;
+if (currentChapterRowVal && lastChapterRowVal) {
+  progressAmount = (currentChapterRowVal / lastChapterRowVal) * 100;
+}
+const isPro = userId ? await hasValidSubscription(userId) : false;
+---
+
+<div class="flex flex-col gap-2 my-2">
+  <div class="flex gap-2 w-full">
+    {
+      bookProgress && isPro ? (
+        <a
+          href={`/book/${bookId}/chapter/${bookProgress.chapterId}`}
+          class={`btn ${primary ? "btn-primary" : "btn-outline"} grow`}
+        >
+          Continue
+        </a>
+      ) : (
+        <a
+          href={`/book/${bookId}/chapter/${firstChapter.id}`}
+          class={`btn ${primary ? "btn-primary" : "btn-outline"} grow`}
+        >
+          Read Now
+        </a>
+      )
+    }
+    <SaveBook client:load initial="saved" bookId={bookId} />
+  </div>
+
+  {
+    bookProgress &&
+      (isPro ? (
+        <>
+          <progress class="progress progress-success w-full" value={progressAmount} max="100" />
+          <p class="text-sm italic text-primary">Last Read: {bookProgress.chapter.title}</p>
+        </>
+      ) : (
+        <>
+          <p class="text-sm italic text-primary">
+            Keep track of your progress:
+            <a href="/upgrade" class="link text-primary font-bold">
+              Upgrade Now
+            </a>
+          </p>
+        </>
+      ))
+  }
+</div>

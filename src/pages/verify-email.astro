@@ -1,0 +1,135 @@
+---
+import Layout from "@layouts/Layout.astro";
+import SiteLayout from "@layouts/SiteLayout.astro";
+import { getSession } from "auth-astro";
+import App from "src/app/main";
+import { z } from "zod";
+
+import { getUser } from "@server/astroHelpers";
+import { formDataToJson, verifyCaptcha } from "@server/astroHelpers";
+import { authOpts } from "@server/authOpts";
+import { sendVerificationEmail } from "@server/email";
+import { SignOut } from "auth-astro/components";
+
+const user = await getUser(Astro.request)
+if (!user) {
+  return Astro.redirect("/login")
+}
+
+const schema = z.object({
+  "g-recaptcha-response": z.string(),
+});
+
+let successMessage = "";
+let errorMessage = "";
+
+if(user.verified) {
+  successMessage = "You are already verified"
+}
+
+if (Astro.request.method === "POST") {
+  try {
+    const data = await Astro.request.formData();
+    const parsedData = schema.safeParse(formDataToJson(data));
+
+    if (parsedData.success) {
+      console.log("Parse Success");
+      const captchaPassed = await verifyCaptcha(parsedData.data["g-recaptcha-response"]);
+
+      if (captchaPassed) {
+        console.log("Captcha Passed Success");
+        await sendVerificationEmail(
+            user.name,
+            user.email,
+            process.env.ASTROAUTH_URL + "/verify-user/" + user.email_token
+          );
+
+          successMessage = "Success! Just one more step! Please check your email for a confirmation link."
+
+      } else {
+        errorMessage = "Captcha Failed. Please try again";
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+  }
+}
+---
+
+<SiteLayout title="Please verify your email">
+  <div
+    class="container mx-auto text-center items-center flex flex-col gap-8 p-2 md:p-14 font-poppins"
+  >
+    <h1 class="text-4xl">Email not verified</h1>
+    <h2 class="font-bold mt-2">
+      {user.email}
+     </h2>
+    <section class="flex w-full flex-col gap-3 p-8 rounded-lg bg-base-300 shadow-md max-w-2xl">
+      {
+        successMessage && (
+          <div class="alert alert-success shadow-lg">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current flex-shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{successMessage}</span>
+            </div>
+          </div>
+        )
+      }
+      {
+        errorMessage && (
+          <div class="alert alert-error shadow-lg rounded-sm">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current flex-shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>Error! {errorMessage}</span>
+            </div>
+          </div>
+        )
+      }
+      {
+        !successMessage && (
+          <>
+            <p>
+              Kindly ensure that you have verified your email address. Please check your inbox and
+              click on the link provided in the email to complete the verification process.
+            </p>
+            <form method="post">
+              <div class="flex justify-center">
+                <div class="g-recaptcha my-4" data-sitekey={process.env.CAPTCHA_SITE_KEY} />
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Resend Verification Email
+              </button>
+            </form>
+            <SignOut class="link">Sign Out</SignOut>
+          </>
+        )
+      }
+    </section>
+  </div>
+</SiteLayout>
