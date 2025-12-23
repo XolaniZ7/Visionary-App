@@ -2,8 +2,9 @@ import Fuse from "fuse.js"
 import { findAllActiveBooks, getAllApprovedAuthors, k, p } from "./db"
 import { resyncSubscription } from "./payfast"
 
-let books = await findAllActiveBooks()
-let users = await getAllApprovedAuthors()
+// Initialize with empty arrays to prevent blocking server startup
+let books: Awaited<ReturnType<typeof findAllActiveBooks>> = []
+let users: Awaited<ReturnType<typeof getAllApprovedAuthors>> = []
 
 export const booksFuse = new Fuse(books, {
     keys: [
@@ -42,6 +43,17 @@ export const authorFuse = new Fuse(users, {
     threshold: 0.3,
     ignoreLocation: true
 })
+
+// Asynchronously populate the search index in the background so it doesn't block server startup
+async function initializeSearchIndex() {
+    console.log("Initializing search index in the background...");
+    books = await findAllActiveBooks();
+    users = await getAllApprovedAuthors();
+    booksFuse.setCollection(books);
+    authorFuse.setCollection(users);
+    console.log("Search index initialized.");
+}
+initializeSearchIndex();
 
 setInterval(async () => {
     console.log("reindexing")
