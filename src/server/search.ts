@@ -53,7 +53,10 @@ async function initializeSearchIndex() {
     authorFuse.setCollection(users);
     console.log("Search index initialized.");
 }
-initializeSearchIndex();
+
+setTimeout(() => {
+    initializeSearchIndex();
+}, 5000);
 
 setInterval(async () => {
     console.log("reindexing")
