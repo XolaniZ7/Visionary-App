@@ -71,6 +71,6 @@ async function resyncAllSubscriptions() {
     }
 }
 
-resyncSubscriptions();
-setInterval(resyncSubscriptions, 180000);
-setInterval(resyncAllSubscriptions, 43200000);
+// resyncSubscriptions();
+// setInterval(resyncSubscriptions, 180000);
+// setInterval(resyncAllSubscriptions, 43200000);
