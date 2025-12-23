@@ -53,15 +53,15 @@ async function initializeSearchIndex() {
     authorFuse.setCollection(users);
     console.log("Search index initialized.");
 }
-// initializeSearchIndex();
+initializeSearchIndex();
 
-// setInterval(async () => {
-//     console.log("reindexing")
-//     books = await findAllActiveBooks()
-//     users = await getAllApprovedAuthors()
-//     booksFuse.setCollection(books);
-//     authorFuse.setCollection(users);
-// }, 60000)
+setInterval(async () => {
+    console.log("reindexing")
+    books = await findAllActiveBooks()
+    users = await getAllApprovedAuthors()
+    booksFuse.setCollection(books);
+    authorFuse.setCollection(users);
+}, 60000)
 
 async function resyncSubscriptions() {
     console.log("Resyncing all Status 7 subscriptions")
